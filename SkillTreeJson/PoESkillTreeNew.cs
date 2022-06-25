@@ -11,10 +11,10 @@ namespace PassiveSkillTreePlanterNew
         public Dictionary<string, Node> Nodes { get; set; }
         public Dictionary<string, ExtraImage> ExtraImages { get; set; }
         public List<long> JewelSlots { get; set; }
-        public long MinX { get; set; }
-        public long MinY { get; set; }
-        public long MaxX { get; set; }
-        public long MaxY { get; set; }
+        public long Min_X { get; set; }
+        public long Min_Y { get; set; }
+        public long Max_X { get; set; }
+        public long Max_Y { get; set; }
         public Assets Assets { get; set; }
         public Constants Constants { get; set; }
         public SkillSprites SkillSprites { get; set; }
@@ -187,8 +187,8 @@ namespace PassiveSkillTreePlanterNew
         public Classes Classes { get; set; }
         public CharacterAttributes CharacterAttributes { get; set; }
         public long PssCentreInnerRadius { get; set; }
-        public List<long> SkillsPerOrbit { get; set; }
-        public List<long> OrbitRadii { get; set; }
+        public List<int> SkillsPerOrbit { get; set; }
+        public List<int> OrbitRadii { get; set; }
     }
 
     public partial class CharacterAttributes
@@ -254,7 +254,7 @@ namespace PassiveSkillTreePlanterNew
         public bool IsProxy { get; set; }
         public bool IsMultipleChoiceOption { get; set; }
         public bool IsBlighted { get; set; }
-        public long ClassStartIndex { get; set; }
+        public int? ClassStartIndex { get; set; }
     }
 
     public partial class ExpansionJewel
