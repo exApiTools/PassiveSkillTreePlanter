@@ -287,7 +287,7 @@ namespace PassiveSkillTreePlanter
                 "Sliders",
                 "Toggles"
             };
-            var newcontentRegionArea = ImGuiNative.igGetContentRegionAvail();
+            var newcontentRegionArea = ImGui.GetContentRegionAvail();
             if (ImGui.BeginChild("LeftSettings", new Vector2(150, newcontentRegionArea.Y), false, ImGuiWindowFlags.None))
                 for (var i = 0; i < settingName.Length; i++)
                     if (ImGui.Selectable(settingName[i], selected == i))
@@ -296,7 +296,7 @@ namespace PassiveSkillTreePlanter
             ImGui.EndChild();
             ImGui.SameLine();
             ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 5.0f);
-            newcontentRegionArea = ImGuiNative.igGetContentRegionAvail();
+            newcontentRegionArea = ImGui.GetContentRegionAvail();
             if (ImGui.BeginChild("RightSettings", new Vector2(newcontentRegionArea.X, newcontentRegionArea.Y), true,
                 ImGuiWindowFlags.None))
                 switch (settingName[selected])
@@ -377,7 +377,7 @@ namespace PassiveSkillTreePlanter
                             // Keep at max 4k byte size not sure why it crashes when upped, not going to bother dealing with this either.
                             Settings.SelectedBuild.Notes = ImGuiExtension.MultiLineTextBox("##Notes",
                                 Settings.SelectedBuild.Notes, 150000, new Vector2(newcontentRegionArea.X - 20, 200),
-                                ImGuiInputTextFlags.Multiline);
+                                ImGuiInputTextFlags.None);
 
                             ImGui.Separator();
                             ImGui.Columns(4, "EditColums", true);
@@ -493,7 +493,7 @@ namespace PassiveSkillTreePlanter
                         // Keep at max 4k byte size not sure why it crashes when upped, not going to bother dealing with this either.
                         ImGuiExtension.MultiLineTextBox("##NotesAdd",
                             Settings.SelectedBuildCreating.Notes, 4000, new Vector2(newcontentRegionArea.X - 20, 200),
-                            ImGuiInputTextFlags.Multiline);
+                            ImGuiInputTextFlags.None);
 
                         ImGui.Separator();
                         ImGui.Columns(4, "AddColums", true);
@@ -521,13 +521,13 @@ namespace PassiveSkillTreePlanter
                             if (ImGui.Button($"v##MOVERULEDOWN{j}"))
                                 treesToMove.Add(new Tuple<int, bool>(j, false));
                             ImGui.NextColumn();
-                            ImGui.PushItemWidth(ImGui.GetWindowContentRegionWidth());
+                            ImGui.PushItemWidth(ImGui.GetContentRegionAvail().X);
                             Settings.SelectedBuildCreating.Trees[j].Tag = ImGuiExtension.InputText($"##TAGADD{j}",
                                     Settings.SelectedBuildCreating.Trees[j].Tag, 1024, ImGuiInputTextFlags.AutoSelectAll);
                             ImGui.PopItemWidth();
                             //ImGui.SameLine();
                             ImGui.NextColumn();
-                            ImGui.PushItemWidth(ImGui.GetWindowContentRegionWidth());
+                            ImGui.PushItemWidth(ImGui.GetContentRegionAvail().X);
                             Settings.SelectedBuildCreating.Trees[j].SkillTreeUrl =
                                ImGuiExtension.InputText($"##GNADD{j}",
                                     Settings.SelectedBuildCreating.Trees[j].SkillTreeUrl, 1024,
