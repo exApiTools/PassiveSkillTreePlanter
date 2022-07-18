@@ -287,7 +287,7 @@ namespace PassiveSkillTreePlanter
                 "Sliders",
                 "Toggles"
             };
-            var newcontentRegionArea = ImGuiNative.igGetContentRegionAvail();
+            var newcontentRegionArea = ImGui.GetContentRegionAvail();
             if (ImGui.BeginChild("LeftSettings", new Vector2(150, newcontentRegionArea.Y), false, ImGuiWindowFlags.None))
                 for (var i = 0; i < settingName.Length; i++)
                     if (ImGui.Selectable(settingName[i], selected == i))
@@ -296,7 +296,7 @@ namespace PassiveSkillTreePlanter
             ImGui.EndChild();
             ImGui.SameLine();
             ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 5.0f);
-            newcontentRegionArea = ImGuiNative.igGetContentRegionAvail();
+            newcontentRegionArea = ImGui.GetContentRegionAvail();
             if (ImGui.BeginChild("RightSettings", new Vector2(newcontentRegionArea.X, newcontentRegionArea.Y), true,
                 ImGuiWindowFlags.None))
                 switch (settingName[selected])
@@ -377,7 +377,7 @@ namespace PassiveSkillTreePlanter
                             // Keep at max 4k byte size not sure why it crashes when upped, not going to bother dealing with this either.
                             Settings.SelectedBuild.Notes = ImGuiExtension.MultiLineTextBox("##Notes",
                                 Settings.SelectedBuild.Notes, 150000, new Vector2(newcontentRegionArea.X - 20, 200),
-                                ImGuiInputTextFlags.Multiline);
+                                ImGuiInputTextFlags.None);
 
                             ImGui.Separator();
                             ImGui.Columns(4, "EditColums", true);
@@ -493,7 +493,7 @@ namespace PassiveSkillTreePlanter
                         // Keep at max 4k byte size not sure why it crashes when upped, not going to bother dealing with this either.
                         ImGuiExtension.MultiLineTextBox("##NotesAdd",
                             Settings.SelectedBuildCreating.Notes, 4000, new Vector2(newcontentRegionArea.X - 20, 200),
-                            ImGuiInputTextFlags.Multiline);
+                            ImGuiInputTextFlags.None);
 
                         ImGui.Separator();
                         ImGui.Columns(4, "AddColums", true);
@@ -521,13 +521,13 @@ namespace PassiveSkillTreePlanter
                             if (ImGui.Button($"v##MOVERULEDOWN{j}"))
                                 treesToMove.Add(new Tuple<int, bool>(j, false));
                             ImGui.NextColumn();
-                            ImGui.PushItemWidth(ImGui.GetWindowContentRegionWidth());
+                            ImGui.PushItemWidth(ImGui.GetContentRegionAvail().X);
                             Settings.SelectedBuildCreating.Trees[j].Tag = ImGuiExtension.InputText($"##TAGADD{j}",
                                     Settings.SelectedBuildCreating.Trees[j].Tag, 1024, ImGuiInputTextFlags.AutoSelectAll);
                             ImGui.PopItemWidth();
                             //ImGui.SameLine();
                             ImGui.NextColumn();
-                            ImGui.PushItemWidth(ImGui.GetWindowContentRegionWidth());
+                            ImGui.PushItemWidth(ImGui.GetContentRegionAvail().X);
                             Settings.SelectedBuildCreating.Trees[j].SkillTreeUrl =
                                ImGuiExtension.InputText($"##GNADD{j}",
                                     Settings.SelectedBuildCreating.Trees[j].SkillTreeUrl, 1024,
@@ -592,9 +592,6 @@ namespace PassiveSkillTreePlanter
                         Settings.LineColor.Value = ImGuiExtension.ColorPicker("Line Color", Settings.LineColor);
                         break;
                     case "Sliders":
-                        Settings.offsetX.Value = ImGuiExtension.IntSlider("offsetX", Settings.offsetX);
-                        Settings.offsetY.Value = ImGuiExtension.IntSlider("offsetY", Settings.offsetY);
-
                         Settings.PickedBorderWidth.Value = ImGuiExtension.IntSlider("Picked Border Width", Settings.PickedBorderWidth);
                         Settings.UnpickedBorderWidth.Value = ImGuiExtension.IntSlider("Unpicked Border Width", Settings.UnpickedBorderWidth);
                         Settings.WrongPickedBorderWidth.Value = ImGuiExtension.IntSlider("WrongPicked Border Width", Settings.WrongPickedBorderWidth);
@@ -841,12 +838,12 @@ namespace PassiveSkillTreePlanter
             var totalNodes = _drawNodes.Count;
             var pickedNodes = passives.Count;
             var wrongPicked = 0;
-
+            var baseOffset = new SharpDX.Vector2(_uiSkillTreeBase.Center.X, _uiSkillTreeBase.Center.Y);
             foreach (var node in _drawNodes)
             {
                 var drawSize = node.DrawSize * scale;
-                var posX = (_uiSkillTreeBase.X + node.DrawPosition.X + Settings.offsetX) * scale;
-                var posY = (_uiSkillTreeBase.Y + node.DrawPosition.Y + Settings.offsetY) * scale;
+                var posX = baseOffset.X + node.DrawPosition.X * scale;
+                var posY = baseOffset.Y + node.DrawPosition.Y * scale;
 
                 var color = Settings.PickedBorderColor;
                 var vWidth = Settings.PickedBorderWidth.Value;
@@ -867,11 +864,11 @@ namespace PassiveSkillTreePlanter
                 if (Settings.LineWidth > 0)
                     foreach (var link in node.DrawNodeLinks)
                     {
-                        var linkDrawPosX = (_uiSkillTreeBase.X + link.X + Settings.offsetX) * scale;
-                        var linkDrawPosY = (_uiSkillTreeBase.Y + link.Y + Settings.offsetY) * scale;
+                        var linkDrawPosX = link.X * scale;
+                        var linkDrawPosY = link.Y * scale;
 
                         Graphics.DrawLine(new SharpDX.Vector2(posX, posY),
-                            new SharpDX.Vector2(linkDrawPosX, linkDrawPosY), Settings.LineWidth, Settings.LineColor);
+                            baseOffset + new SharpDX.Vector2(linkDrawPosX, linkDrawPosY), Settings.LineWidth, Settings.LineColor);
                     }
             }
 
@@ -881,15 +878,15 @@ namespace PassiveSkillTreePlanter
                 {
                     node.Init();
                     var drawSize = node.DrawSize * scale;
-                    var posX = (_uiSkillTreeBase.X + node.DrawPosition.X + Settings.offsetX) * scale;
-                    var posY = (_uiSkillTreeBase.Y + node.DrawPosition.Y + Settings.offsetY) * scale;
+                    var posX = node.DrawPosition.X * scale;
+                    var posY = node.DrawPosition.Y * scale;
 
                     Graphics.DrawLine(new SharpDX.Vector2(posX, posY), new SharpDX.Vector2(posX, posY),
                         Settings.LineWidth, Settings.WrongPickedBorderColor);
                     //Graphics.DrawPluginImage(Path.Combine(DirectoryFullName, "images/AtlasMapCircle.png"),
                     //new RectangleF(posX - drawSize / 2, posY - drawSize / 2, drawSize, drawSize),
                     //Settings.WrongPickedBorderColor);
-                    Graphics.DrawImage(_ringImage, new RectangleF(posX - drawSize / 2, posY - drawSize / 2, drawSize, drawSize), Settings.WrongPickedBorderColor);
+                    Graphics.DrawImage(_ringImage, new RectangleF(baseOffset.X + posX - drawSize / 2, baseOffset.Y + posY - drawSize / 2, drawSize, drawSize), Settings.WrongPickedBorderColor);
                 }
 
 

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using ExileCore;
 using Newtonsoft.Json;
 using SharpDX;
@@ -48,7 +49,8 @@ namespace PassiveSkillTreePlanter.SkillTreeJson
                     bMastery = nd.Value.IsMastery,
                     bMult = nd.Value.IsMultipleChoice,
                     linkedNodes = nd.Value.Out,
-                    bKeyStone = nd.Value.IsKeystone
+                    bKeyStone = nd.Value.IsKeystone,
+                    Constants = SkillTree.Constants,
                 };
 
                 Nodes.Add(skillNode);

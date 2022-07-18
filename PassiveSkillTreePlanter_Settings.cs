@@ -15,8 +15,6 @@ namespace PassiveSkillTreePlanter
             LineColor = new ColorNode(Color.Gray);
             SelectedURLFile = string.Empty;
         }
-        public RangeNode<int> offsetX { get; set; } = new RangeNode<int>(12450, 11000, 14000);
-        public RangeNode<int> offsetY { get; set; } = new RangeNode<int>(11850, 11000, 13000);
 
         public RangeNode<int> BorderWidth { get; set; }
 
