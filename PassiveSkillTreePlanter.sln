@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33424.131
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PassiveSkillTreePlanter", "PassiveSkillTreePlanter.csproj", "{CAA01498-5C8A-429F-8BB8-57E29DD05E6E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CAA01498-5C8A-429F-8BB8-57E29DD05E6E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CAA01498-5C8A-429F-8BB8-57E29DD05E6E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CAA01498-5C8A-429F-8BB8-57E29DD05E6E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CAA01498-5C8A-429F-8BB8-57E29DD05E6E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {22F55315-7EC7-44F6-889C-38378BC7A14C}
+	EndGlobalSection
+EndGlobal

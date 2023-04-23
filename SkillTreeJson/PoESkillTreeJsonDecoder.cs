@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using ExileCore;
 using Newtonsoft.Json;
 using SharpDX;
@@ -10,10 +9,10 @@ namespace PassiveSkillTreePlanter.SkillTreeJson
 
     public class PoESkillTreeJsonDecoder
     {
-        public List<SkillNodeGroup> NodeGroups;
-        public List<SkillNode> Nodes;
-        public Dictionary<ushort, SkillNode> Skillnodes;
-        public PassiveSkillTreePlanterNew.PoESkillTree SkillTree;
+        private List<SkillNodeGroup> NodeGroups;
+        private List<SkillNode> Nodes;
+        public Dictionary<ushort, SkillNode> SkillNodes;
+        private PoESkillTree SkillTree;
 
         public void Decode(string jsonTree)
         {
@@ -33,8 +32,8 @@ namespace PassiveSkillTreePlanter.SkillTreeJson
                 }
             };
 
-            SkillTree = JsonConvert.DeserializeObject<PassiveSkillTreePlanterNew.PoESkillTree>(jsonTree, jss);
-            Skillnodes = new Dictionary<ushort, SkillNode>();
+            SkillTree = JsonConvert.DeserializeObject<PoESkillTree>(jsonTree, jss);
+            SkillNodes = new Dictionary<ushort, SkillNode>();
             NodeGroups = new List<SkillNodeGroup>();
 
             foreach (var nd in SkillTree.Nodes)
@@ -54,7 +53,7 @@ namespace PassiveSkillTreePlanter.SkillTreeJson
                 };
 
                 Nodes.Add(skillNode);
-                Skillnodes.Add((ushort)nd.Value.Skill, skillNode);
+                SkillNodes.Add((ushort)nd.Value.Skill, skillNode);
             }
 
             NodeGroups = new List<SkillNodeGroup>();
@@ -67,7 +66,7 @@ namespace PassiveSkillTreePlanter.SkillTreeJson
 
                 foreach (var node in gp.Value.Nodes)
                 {
-                    var nodeToAdd = Skillnodes[node];
+                    var nodeToAdd = SkillNodes[node];
                     ng.Nodes.Add(nodeToAdd);
                     nodeToAdd.SkillNodeGroup = ng;
                 }

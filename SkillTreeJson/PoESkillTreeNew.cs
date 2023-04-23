@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace PassiveSkillTreePlanterNew
+namespace PassiveSkillTreePlanter.SkillTreeJson
 {
-
-    public partial class PoESkillTree
+    public class PoESkillTree
     {
         public List<Class> Classes { get; set; }
         public Dictionary<string, Group> Groups { get; set; }
@@ -21,7 +20,7 @@ namespace PassiveSkillTreePlanterNew
         public List<double> ImageZoomLevels { get; set; }
     }
 
-    public partial class Assets
+    public class Assets
     {
         public AscendancyButton PsSkillFrame { get; set; }
         public AscendancyButton PsSkillFrameHighlighted { get; set; }
@@ -143,7 +142,7 @@ namespace PassiveSkillTreePlanterNew
         public EternalEmpireJewelCircle1 ImgPsFadeSide { get; set; }
     }
 
-    public partial class AscendancyButton
+    public class AscendancyButton
     {
         public Uri The01246 { get; set; }
         public Uri The02109 { get; set; }
@@ -151,12 +150,12 @@ namespace PassiveSkillTreePlanterNew
         public Uri The03835 { get; set; }
     }
 
-    public partial class EternalEmpireJewelCircle1
+    public class EternalEmpireJewelCircle1
     {
         public Uri The1 { get; set; }
     }
 
-    public partial class Class
+    public class Class
     {
         public string Name { get; set; }
         public long BaseStr { get; set; }
@@ -165,7 +164,7 @@ namespace PassiveSkillTreePlanterNew
         public List<Ascendancy> Ascendancies { get; set; }
     }
 
-    public partial class Ascendancy
+    public class Ascendancy
     {
         public string Id { get; set; }
         public string Name { get; set; }
@@ -174,7 +173,7 @@ namespace PassiveSkillTreePlanterNew
         public FlavourTextRect FlavourTextRect { get; set; }
     }
 
-    public partial class FlavourTextRect
+    public class FlavourTextRect
     {
         public long X { get; set; }
         public long Y { get; set; }
@@ -182,7 +181,7 @@ namespace PassiveSkillTreePlanterNew
         public long Height { get; set; }
     }
 
-    public partial class Constants
+    public class Constants
     {
         public Classes Classes { get; set; }
         public CharacterAttributes CharacterAttributes { get; set; }
@@ -191,14 +190,14 @@ namespace PassiveSkillTreePlanterNew
         public List<int> OrbitRadii { get; set; }
     }
 
-    public partial class CharacterAttributes
+    public class CharacterAttributes
     {
         public long Strength { get; set; }
         public long Dexterity { get; set; }
         public long Intelligence { get; set; }
     }
 
-    public partial class Classes
+    public class Classes
     {
         public long StrDexIntClass { get; set; }
         public long StrClass { get; set; }
@@ -209,14 +208,14 @@ namespace PassiveSkillTreePlanterNew
         public long DexIntClass { get; set; }
     }
 
-    public partial class ExtraImage
+    public class ExtraImage
     {
         public double X { get; set; }
         public double Y { get; set; }
         public string Image { get; set; }
     }
 
-    public partial class Group
+    public class Group
     {
         public double X { get; set; }
         public double Y { get; set; }
@@ -225,7 +224,7 @@ namespace PassiveSkillTreePlanterNew
         public bool IsProxy { get; set; }
     }
 
-    public partial class Node
+    public class Node
     {
         public long Skill { get; set; }
         public string Name { get; set; }
@@ -257,7 +256,7 @@ namespace PassiveSkillTreePlanterNew
         public int? ClassStartIndex { get; set; }
     }
 
-    public partial class ExpansionJewel
+    public class ExpansionJewel
     {
         public long Size { get; set; }
         public long Index { get; set; }
@@ -265,7 +264,7 @@ namespace PassiveSkillTreePlanterNew
         public long Parent { get; set; }
     }
 
-    public partial class SkillSprites
+    public class SkillSprites
     {
         public List<KeystoneActive> NormalActive { get; set; }
         public List<KeystoneActive> NotableActive { get; set; }
@@ -276,13 +275,13 @@ namespace PassiveSkillTreePlanterNew
         public List<KeystoneActive> Mastery { get; set; }
     }
 
-    public partial class KeystoneActive
+    public class KeystoneActive
     {
         public string Filename { get; set; }
         public Dictionary<string, Coord> Coords { get; set; }
     }
 
-    public partial class Coord
+    public class Coord
     {
         public long X { get; set; }
         public long Y { get; set; }

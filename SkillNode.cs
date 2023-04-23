@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using PassiveSkillTreePlanterNew;
+using PassiveSkillTreePlanter.SkillTreeJson;
 using SharpDX;
 
 namespace PassiveSkillTreePlanter
@@ -32,12 +32,12 @@ namespace PassiveSkillTreePlanter
             get
             {
                 if (SkillNodeGroup == null) return new Vector2();
-                double d = OrbitRadii[(int) Orbit];
-                return SkillNodeGroup.Position - new Vector2((float)(d * Math.Sin(-Arc)), (float)(d * Math.Cos(-Arc)));
+                float d = OrbitRadii[(int)Orbit];
+                return SkillNodeGroup.Position - d * new Vector2(MathF.Sin(-Arc), MathF.Cos(-Arc));
             }
         }
 
-        public double Arc => GetOrbitAngle(OrbitIndex, SkillsPerOrbit[(int)Orbit]);
+        public float Arc => GetOrbitAngle(OrbitIndex, SkillsPerOrbit[(int)Orbit]);
 
         public void Init()
         {
@@ -56,13 +56,13 @@ namespace PassiveSkillTreePlanter
         private static readonly int[] Angles16 = { 0, 30, 45, 60, 90, 120, 135, 150, 180, 210, 225, 240, 270, 300, 315, 330 };
         private static readonly int[] Angles40 = { 0, 10, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 110, 120, 130, 135, 140, 150, 160, 170, 180, 190, 200, 210, 220, 225, 230, 240, 250, 260, 270, 280, 290, 300, 310, 315, 320, 330, 340, 350 };
 
-        private static double GetOrbitAngle(long orbitIndex, long maxNodePositions)
+        private static float GetOrbitAngle(long orbitIndex, long maxNodePositions)
         {
-            return orbitIndex switch
+            return maxNodePositions switch
             {
-                16 => Angles16[orbitIndex],
-                40 => Angles40[orbitIndex],
-                _ => 2 * Math.PI * orbitIndex / maxNodePositions
+                16 => Angles16[orbitIndex] * MathF.PI / 180,
+                40 => Angles40[orbitIndex] * MathF.PI / 180,
+                _ => 2 * MathF.PI * orbitIndex / maxNodePositions
             };
         }
     }

@@ -19,15 +19,15 @@ namespace PassiveSkillTreePlanter.UrlDecoders
         {
             var nodesId = new List<ushort>();
 
-            var textToDecode = url.Substring(url.IndexOf("tree/") + 5).Replace("-", "+").Replace("_", "/");
+            var textToDecode = url[(url.IndexOf("tree/", StringComparison.Ordinal) + 5)..].Replace("-", "+").Replace("_", "/");
 
             var data = Convert.FromBase64String(textToDecode);
 
-            var Version = (data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3];
+            var version = (data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3];
             var Class = data[4];
             var aClass = data[5];
 
-            for (var k = Version > 3 ? 7 : 6; k < data.Length; k += 2)
+            for (var k = version > 3 ? 7 : 6; k < data.Length; k += 2)
             {
                 var nodeId = (ushort)((data[k] << 8) | data[k + 1]);
                 nodesId.Add(nodeId);

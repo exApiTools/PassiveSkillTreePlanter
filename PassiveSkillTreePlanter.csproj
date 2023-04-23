@@ -13,8 +13,6 @@
   <ItemGroup>
     <None Remove="SkillTreeData.json" />
     <None Remove="textures\*" />
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="SkillTreeData.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

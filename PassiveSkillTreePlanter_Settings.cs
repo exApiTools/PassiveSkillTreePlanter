@@ -1,5 +1,4 @@
-﻿using ExileCore.Shared.Attributes;
-using ExileCore.Shared.Interfaces;
+﻿using ExileCore.Shared.Interfaces;
 using ExileCore.Shared.Nodes;
 using SharpDX;
 using ImGuiVector2 = System.Numerics.Vector2;

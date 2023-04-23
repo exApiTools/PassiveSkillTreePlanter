@@ -17,7 +17,7 @@ namespace PassiveSkillTreePlanter
 
         public static SkillTreeData LoadBuild(string buildName)
         {
-            var buildFile = $"{Core.SkillTreeUrlFilesDir}\\{buildName}.json";
+            var buildFile = Path.Join(Core.SkillTreeUrlFilesDir, $"{buildName}.json");
             return LoadSettingFile<SkillTreeData>(buildFile);
         }
 

@@ -6,7 +6,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using ExileCore;
 using ExileCore.PoEMemory;
-using ExileCore.PoEMemory.Components;
 using ExileCore.Shared;
 using ExileCore.Shared.AtlasHelper;
 using ImGuiNET;
@@ -17,40 +16,34 @@ using Vector2 = System.Numerics.Vector2;
 
 namespace PassiveSkillTreePlanter
 {
-    using System.Threading.Tasks;
-
-
     public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlanterSettings>
     {
-        public const string SkillTreeDataFile = "SkillTreeData.json";
-        public const string SkillTreeDir = "Builds";
-        public static int selected;
-        public readonly PoESkillTreeJsonDecoder _skillTreeeData = new PoESkillTreeJsonDecoder();
+        private const string SkillTreeDataFile = "SkillTreeData.json";
+        private const string SkillTreeDir = "Builds";
+        private static int selected;
+        private readonly PoESkillTreeJsonDecoder _skillTreeData = new PoESkillTreeJsonDecoder();
 
 
-        public bool _bUiRootInitialized;
-        public List<SkillNode> _drawNodes = new List<SkillNode>();
+        private bool _bUiRootInitialized;
+        private List<SkillNode> _drawNodes = new List<SkillNode>();
 
-        public Element _uiSkillTreeBase;
-        public List<ushort> _urlNodes = new List<ushort>(); //List of nodes decoded from URL
+        private Element _uiSkillTreeBase;
+        private List<ushort> _urlNodes = new List<ushort>(); //List of nodes decoded from URL
 
-        public string AddNewBuildFile = "";
-        public string AddNewBuildThreadUrl = "";
-        public string AddNewBuildUrl = "";
+        private string AddNewBuildFile = "";
 
         private AtlasTexture _ringImage;
 
-        public string CurrentlySelectedBuildFile { get; set; }
-        public string CurrentlySelectedBuildFileEdit { get; set; }
-        public string CurrentlySelectedBuildUrl { get; set; }
-        public string CurrentlySelectedBuildForumThread { get; set; }
+        private string CurrentlySelectedBuildFile { get; set; }
+        private string CurrentlySelectedBuildFileEdit { get; set; }
+        private string CurrentlySelectedBuildUrl { get; set; }
+        private string CurrentlySelectedBuildForumThread { get; set; }
+        private List<string> BuildFiles { get; set; }
 
-        public string SkillTreeUrlFilesDir => DirectoryFullName + @"\" + SkillTreeDir;
-        public List<string> BuildFiles { get; set; }
-        public IntPtr TextEditCallback { get; set; }
+        public string SkillTreeUrlFilesDir => Path.Join(ConfigDirectory, SkillTreeDir);
         public static PassiveSkillTreePlanter Core { get; set; }
 
-        public override async void OnLoad()
+        public override void OnLoad()
         {
             Core = this;
             if (!Directory.Exists(SkillTreeUrlFilesDir))
@@ -68,6 +61,7 @@ namespace PassiveSkillTreePlanter
             ReadUrlFromSelectedUrl(Settings.SelectedURLFile);
        
         }
+
         public override bool Initialise()
         {
             _ringImage = GetAtlasTexture("AtlasMapCircle");//IconArcing or IconArcing.png, doesn't matter, works both
@@ -76,16 +70,15 @@ namespace PassiveSkillTreePlanter
 
         public override void Render()
         {
-            base.Render();
-
             // TODO: let users load party passive trees when we can get it from poehud core
             //PlayerInPartyDraw = PartyElements.GetPlayerInfoElementList(PlayerEntities);
             ExtRender();
             EzTreeChanger();
         }
-        public bool InBounds(int index, int arrayLength)
+
+        private static bool InBounds(int index, int arrayLength)
         {
-            return (index >= 0 && index <= arrayLength);
+            return index >= 0 && index <= arrayLength;
         }
 
         private void EzTreeChanger()
@@ -154,7 +147,7 @@ namespace PassiveSkillTreePlanter
                 .Aggregate(fileName, (current, c) => current.Replace(c.ToString(), string.Empty));
         }
 
-        public void RenameFile(string fileName, string oldFileName)
+        private void RenameFile(string fileName, string oldFileName)
         {
             fileName = CleanFileName(fileName);
             var newFilePath = Path.Combine(SkillTreeUrlFilesDir, fileName.TrimEnd('\0').TrimEnd('\u0000').Replace("\u0000", "") + ".json");
@@ -174,7 +167,7 @@ namespace PassiveSkillTreePlanter
             ReadUrlFromSelectedUrl(Settings.SelectedURLFile);
         }
 
-        public string RemoveAccName(string url)
+        private static string RemoveAccName(string url)
         {
             // Aim is to remove the string content but keep the info inside the text file incase user wants to revisit that account/char in the future
             if (url.Contains("?accountName"))
@@ -191,89 +184,6 @@ namespace PassiveSkillTreePlanter
                 }, StringSplitOptions.None)[0];
 
             return url;
-        }
-
-        public void ReplaceUrlContents(string fileName, string newContents)
-        {
-            fileName = CleanFileName(fileName);
-            var filePath = Path.Combine(SkillTreeUrlFilesDir, fileName + ".txt");
-            if (!File.Exists(filePath))
-            {
-                LogError("PassiveSkillTreePlanter: File doesnt exist", 10);
-                return;
-            }
-
-            if (!IsBase64String(RemoveAccName(newContents)))
-            {
-                LogError(
-                    "PassiveSkillTreePlanter: Invalid URL or you are trying to add something that is not a pathofexile.com build URL",
-                    10);
-                return;
-            }
-
-            //Now Rename the File
-            File.WriteAllText(filePath, newContents);
-            ReadUrlFromSelectedUrl(Settings.SelectedURLFile);
-        }
-
-        public void ReplaceThreadUrlContents(string fileName, string newContents)
-        {
-            var skillTreeUrlFilePath = Path.Combine(SkillTreeUrlFilesDir, fileName + ".txt");
-            if (!File.Exists(skillTreeUrlFilePath))
-                return;
-
-            var strings = File.ReadAllLines(skillTreeUrlFilePath);
-            var newString = new List<string>
-            {
-                strings[0],
-                newContents
-            };
-            File.WriteAllLines(skillTreeUrlFilePath, newString);
-        }
-
-        public void AddNewBuild(string buildName, string buildUrl, string buildThreadUrl)
-        {
-            var newFilePath = Path.Combine(SkillTreeUrlFilesDir, buildName + ".txt");
-            if (File.Exists(newFilePath))
-            {
-                LogError("PassiveSkillTreePlanter.Add: File already Exists!", 10);
-                return;
-            }
-
-            if (!IsBase64String(buildUrl))
-            {
-                LogError(
-                    "PassiveSkillTreePlanter.Add: Invalid URL or you are trying to add something that is not a pathofexile.com build URL OR you need to remove the game version (3.x.x)",
-                    10);
-                return;
-            }
-
-            var newString = new List<string>
-            {
-                buildUrl
-            };
-            if (!string.IsNullOrEmpty(buildThreadUrl))
-                newString.Add(buildThreadUrl);
-
-            File.WriteAllLines(newFilePath, newString);
-            LoadBuildFiles();
-        }
-
-        public static bool IsBase64String(string url)
-        {
-            try
-            {
-                url = url.Split('/').LastOrDefault()?.Replace("-", "+").Replace("_", "/");
-                // If no exception is caught, then it is possibly a base64 encoded string
-                var data = Convert.FromBase64String(url);
-                // The part that checks if the string was properly padded to the
-                return url.Replace(" ", "").Length % 4 == 0;
-            }
-            catch
-            {
-                // If exception is caught, then it is not a base64 encoded string
-                return false;
-            }
         }
 
         public override void DrawSettings()
@@ -469,7 +379,7 @@ namespace PassiveSkillTreePlanter
 
                             if (ImGui.Button($"Save Build to File: {Settings.SelectedURLFile}"))
                             {
-                                TreeConfig.SaveSettingFile($@"{SkillTreeUrlFilesDir}\{Settings.SelectedURLFile}", Settings.SelectedBuild);
+                                TreeConfig.SaveSettingFile(Path.Join(SkillTreeUrlFilesDir, Settings.SelectedURLFile), Settings.SelectedBuild);
                                 BuildFiles = TreeConfig.GetBuilds();
                             }
                         }
@@ -576,7 +486,7 @@ namespace PassiveSkillTreePlanter
                         AddNewBuildFile = ImGuiExtension.InputText("##CreationLabel", AddNewBuildFile, 1024, ImGuiInputTextFlags.EnterReturnsTrue);
                         if (ImGui.Button($"Save Build to File: {AddNewBuildFile}"))
                         {
-                            TreeConfig.SaveSettingFile($@"{SkillTreeUrlFilesDir}\{AddNewBuildFile}", Settings.SelectedBuildCreating);
+                            TreeConfig.SaveSettingFile(Path.Join(SkillTreeUrlFilesDir, AddNewBuildFile), Settings.SelectedBuildCreating);
                             BuildFiles = TreeConfig.GetBuilds();
                             Settings.SelectedBuildCreating = new TreeConfig.SkillTreeData();
                         }
@@ -604,42 +514,6 @@ namespace PassiveSkillTreePlanter
 
             ImGui.PopStyleVar();
             ImGui.EndChild();
-        }
-
-        private void ReadHtmlLineFromFile(string fileName)
-        {
-            var skillTreeUrlFilePath = Path.Combine(SkillTreeUrlFilesDir, fileName + ".txt");
-            if (!File.Exists(skillTreeUrlFilePath))
-            {
-                LogMessage("PassiveSkillTree: Select build url from list in options.", 10);
-                return;
-            }
-
-            var strings = File.ReadAllLines(skillTreeUrlFilePath);
-            if (strings.Length == 1 || strings[1] == string.Empty)
-            {
-                LogMessage("PassiveSkillTree: This build has no saved Forum link.", 10);
-                return;
-            }
-
-            if (strings[1] != null && strings[1] != string.Empty)
-                Process.Start(strings[1]);
-        }
-
-        private string GetHtmlLineFromFile(string fileName)
-        {
-            var skillTreeUrlFilePath = Path.Combine(SkillTreeUrlFilesDir, fileName + ".txt");
-            if (!File.Exists(skillTreeUrlFilePath))
-                return string.Empty;
-
-            var strings = File.ReadAllLines(skillTreeUrlFilePath);
-            if (strings.Length == 1)
-                return string.Empty;
-
-            if (strings[1] != null && strings[1] != string.Empty)
-                return strings[1];
-
-            return string.Empty;
         }
 
         private void ReadUrlFromSelectedBuild(string url, string treeName)
@@ -704,76 +578,47 @@ namespace PassiveSkillTreePlanter
             ProcessNodes();
         }
 
-        private List<string> ReadNotesFromSelectedBuild(string fileName)
-        {
-            var BuildFilePath = Path.Combine(SkillTreeUrlFilesDir, fileName + ".txt");
-            var tempList = new List<string>();
-            if (!File.Exists(BuildFilePath))
-                return tempList;
-
-            var strings = File.ReadAllLines(BuildFilePath);
-            if (strings.Length <= 2) return tempList;
-            for (var i = 2; i < strings.Length; i++)
-            {
-                var line = strings[i];
-                var replace = line.Replace('–', '-');
-                tempList.Add(replace);
-            }
-
-            return tempList;
-        }
-
         private void ProcessNodes()
         {
             _drawNodes = new List<SkillNode>();
 
             //Read data
-            var skillTreeDataPath = DirectoryFullName + @"\" + SkillTreeDataFile;
+            var skillTreeDataPath = Path.Join(DirectoryFullName, SkillTreeDataFile);
             if (!File.Exists(skillTreeDataPath))
             {
-                LogMessage("PassiveSkillTree: Can't find file " + SkillTreeDataFile + " with skill tree data.", 10);
+                LogMessage($"PassiveSkillTree: Can't find file {SkillTreeDataFile} with skill tree data.", 10);
                 return;
             }
 
             var skillTreeJson = File.ReadAllText(skillTreeDataPath);
-            _skillTreeeData.Decode(skillTreeJson);
+            _skillTreeData.Decode(skillTreeJson);
             foreach (var urlNodeId in _urlNodes)
             {
-                if (!_skillTreeeData.Skillnodes.ContainsKey(urlNodeId))
+                if (!_skillTreeData.SkillNodes.ContainsKey(urlNodeId))
                 {
-                    LogError("PassiveSkillTree: Can't find passive skill tree node with id: " + urlNodeId, 5);
+                    LogError($"PassiveSkillTree: Can't find passive skill tree node with id: {urlNodeId}", 5);
                     continue;
                 }
 
-                var node = _skillTreeeData.Skillnodes[urlNodeId];
+                var node = _skillTreeData.SkillNodes[urlNodeId];
                 node.Init();
                 _drawNodes.Add(node);
-                var dontDrawLinesTwice = new List<ushort>();
                 foreach (var l in node.linkedNodes)
                 {
                     var lNodeId = (ushort) l;
                     if (!_urlNodes.Contains(lNodeId))
                         continue;
 
-                    if (dontDrawLinesTwice.Contains(lNodeId))
-                        continue;
-
-                    if (!_skillTreeeData.Skillnodes.ContainsKey(lNodeId))
+                    if (!_skillTreeData.SkillNodes.TryGetValue(lNodeId, out var lNode))
                     {
-                        LogError(
-                            "PassiveSkillTree: Can't find passive skill tree node with id: " + lNodeId +
-                            " to draw the link", 5);
+                        LogError($"PassiveSkillTree: Can't find passive skill tree node with id: {lNodeId} to draw the link", 5);
                         continue;
                     }
 
-                    var lNode = _skillTreeeData.Skillnodes[lNodeId];
                     node.DrawNodeLinks.Add(lNode.Position);
                 }
-
-                dontDrawLinesTwice.Add(urlNodeId);
             }
         }
-
 
         private bool DecodeUrl(string url)
         {
@@ -790,13 +635,6 @@ namespace PassiveSkillTreePlanter
             }
 
             return false;
-        }
-
-        private async Task DownloadTree()
-        {
-            var skillTreeDataPath = DirectoryFullName + @"\" + SkillTreeDataFile;
-            await PassiveSkillTreeJson_Downloader.DownloadSkillTreeToFileAsync(skillTreeDataPath);
-            LogMessage("Skill tree updated!", 3);
         }
 
         private void ExtRender()
@@ -837,7 +675,6 @@ namespace PassiveSkillTreePlanter
 
             var totalNodes = _drawNodes.Count;
             var pickedNodes = passives.Count;
-            var wrongPicked = 0;
             var baseOffset = new SharpDX.Vector2(_uiSkillTreeBase.Center.X, _uiSkillTreeBase.Center.Y);
             foreach (var node in _drawNodes)
             {
@@ -846,10 +683,8 @@ namespace PassiveSkillTreePlanter
                 var posY = baseOffset.Y + node.DrawPosition.Y * scale;
 
                 var color = Settings.PickedBorderColor;
-                var vWidth = Settings.PickedBorderWidth.Value;
-                if (!passives.Contains((ushort) node.Id))
+                if (!passives.Contains(node.Id))
                 {
-                    vWidth = Settings.UnpickedBorderWidth.Value;
                     color = Settings.UnpickedBorderColor;
                 }
                 else
@@ -872,9 +707,9 @@ namespace PassiveSkillTreePlanter
                     }
             }
 
-            wrongPicked = passives.Count;
+            var wrongPicked = passives.Count;
             foreach (var passiveId in passives)
-                if (_skillTreeeData.Skillnodes.TryGetValue(passiveId, out var node))
+                if (_skillTreeData.SkillNodes.TryGetValue(passiveId, out var node))
                 {
                     node.Init();
                     var drawSize = node.DrawSize * scale;
