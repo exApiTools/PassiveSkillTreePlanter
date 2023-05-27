@@ -8,11 +8,14 @@
     <DebugType>embedded</DebugType>
     <PathMap>$(MSBuildProjectDirectory)=$(MSBuildProjectName)</PathMap>
     <EmbedAllSources>true</EmbedAllSources>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="AtlasTreeData.json" />
     <None Remove="SkillTreeData.json" />
     <None Remove="textures\*" />
+    <Content Include="AtlasTreeData.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="SkillTreeData.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
