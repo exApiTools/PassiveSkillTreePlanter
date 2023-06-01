@@ -34,9 +34,9 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
 
     private AtlasTexture _ringImage;
 
-    private List<string> BuildFiles { get; set; }
+    private List<string> BuildFiles { get; set; } = new List<string>();
 
-    public string SkillTreeUrlFilesDir => Path.Join(ConfigDirectory, SkillTreeDir);
+    public string SkillTreeUrlFilesDir => Directory.CreateDirectory(Path.Join(ConfigDirectory, SkillTreeDir)).FullName;
 
     private TreeConfig.SkillTreeData _selectedBuildData = new TreeConfig.SkillTreeData();
 
