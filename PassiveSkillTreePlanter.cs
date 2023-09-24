@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using ExileCore;
 using ExileCore.PoEMemory.Elements;
 using ExileCore.Shared.AtlasHelper;
@@ -31,6 +33,12 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
     private int _selectedSettingsTab;
     private string _addNewBuildFile = "";
     private string _buildNameEditorValue;
+
+    private string _maxrollUrlInput = "";
+    private Task<MaxRollFetchResult> _maxRollDataFetchTask;
+    private CancellationTokenSource _maxRollDataFetchCancellation;
+    private int _selectedMaxrollVariant;
+    private int _selectedMaxrollProgress = -1;
 
     private AtlasTexture _ringImage;
 
@@ -215,8 +223,8 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
         ImGui.EndChild();
         ImGui.SameLine();
         ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 5.0f);
-        var newcontentRegionArea = ImGui.GetContentRegionAvail();
-        if (ImGui.BeginChild("RightSettings", newcontentRegionArea, true, ImGuiWindowFlags.None))
+        var contentRegionArea = ImGui.GetContentRegionAvail();
+        if (ImGui.BeginChild("RightSettings", contentRegionArea, true, ImGuiWindowFlags.None))
         {
             var trees = _selectedBuildData.Trees;
             switch (settingName[_selectedSettingsTab])
@@ -300,170 +308,7 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
                     ImGuiNative.igPopTextWrapPos();
                     break;
                 case "Build Edit":
-                    if (trees.Count > 0)
-                    {
-                        ImGui.Separator();
-                        var buildLink = _selectedBuildData.BuildLink;
-                        if (ImGui.InputText("Forum Thread", ref buildLink, 1024, ImGuiInputTextFlags.None))
-                        {
-                            _selectedBuildData.BuildLink = buildLink.Replace("\u0000", null);
-                            _selectedBuildData.Modified = true;
-                        }
-
-                        ImGui.Text("Notes");
-                        // Keep at max 4k byte size not sure why it crashes when upped, not going to bother dealing with this either.
-                        var notes = _selectedBuildData.Notes;
-                        if (ImGui.InputTextMultiline("##Notes", ref notes, 150000, new Vector2(newcontentRegionArea.X - 20, 200)))
-                        {
-                            _selectedBuildData.Notes = notes.Replace("\u0000", null);
-                            _selectedBuildData.Modified = true;
-                        }
-
-                        ImGui.Separator();
-                        ImGui.Columns(5, "EditColums", true);
-                        ImGui.SetColumnWidth(0, 30f);
-                        ImGui.SetColumnWidth(1, 50f);
-                        ImGui.SetColumnWidth(3, 38f);
-                        ImGui.Text("");
-                        ImGui.NextColumn();
-                        ImGui.Text("Move");
-                        ImGui.NextColumn();
-                        ImGui.Text("Tree Name");
-                        ImGui.NextColumn();
-                        ImGui.Text("Type");
-                        ImGui.NextColumn();
-                        ImGui.Text("Skill Tree");
-                        ImGui.NextColumn();
-                        if (trees.Count != 0)
-                            ImGui.Separator();
-                        for (var j = 0; j < trees.Count; j++)
-                        {
-                            ImGui.PushID($"{j}");
-                            if (ImGui.Button("X##REMOVERULE"))
-                            {
-                                trees.RemoveAt(j);
-                                _selectedBuildData.Modified = true;
-                                continue;
-                            }
-
-                            ImGui.NextColumn();
-
-                            ImGui.BeginDisabled(j == 0);
-                            if (ImGui.Button("^##MOVERULEUPEDIT"))
-                            {
-                                MoveElement(trees, j, true);
-                                _selectedBuildData.Modified = true;
-                            }
-
-                            ImGui.EndDisabled();
-                            ImGui.SameLine();
-                            ImGui.BeginDisabled(j == trees.Count - 1);
-                            if (ImGui.Button("v##MOVERULEDOWNEDIT"))
-                            {
-                                MoveElement(trees, j, false);
-                                _selectedBuildData.Modified = true;
-                            }
-
-                            ImGui.EndDisabled();
-                            ImGui.NextColumn();
-                            ImGui.PushItemWidth(ImGui.GetContentRegionAvail().X);
-                            ImGui.InputText("##TAG", ref trees[j].Tag, 1024, ImGuiInputTextFlags.AutoSelectAll);
-                            ImGui.PopItemWidth();
-                            //ImGui.SameLine();
-                            ImGui.NextColumn();
-                            var iconsIndex = trees[j].Type switch
-                            {
-                                ESkillTreeType.Unknown => MapIconsIndex.QuestObject,
-                                ESkillTreeType.Character => MapIconsIndex.MyPlayer,
-                                ESkillTreeType.Atlas => MapIconsIndex.TangleAltar,
-                            };
-                            var rect = SpriteHelper.GetUV(iconsIndex);
-                            ImGui.Image(Graphics.GetTextureId("Icons.png"), new Vector2(ImGui.CalcTextSize("A").Y), rect.TopLeft.ToVector2Num(),
-                                rect.BottomRight.ToVector2Num());
-                            ImGui.NextColumn();
-                            ImGui.PushItemWidth(ImGui.GetContentRegionAvail().X);
-                            if (ImGui.InputText("##GN", ref trees[j].SkillTreeUrl, 1024, ImGuiInputTextFlags.AutoSelectAll))
-                            {
-                                trees[j].ResetType();
-                                _selectedBuildData.Modified = true;
-                            }
-
-                            ImGui.PopItemWidth();
-                            ImGui.NextColumn();
-                            ImGui.PopID();
-                        }
-
-                        ImGui.Separator();
-                        ImGui.Columns(1, "", false);
-                    }
-                    else
-                    {
-                        ImGui.Text("No Data Selected");
-                    }
-
-                    if (ImGui.Button("+##AN"))
-                    {
-                        trees.Add(new TreeConfig.Tree());
-                        _selectedBuildData.Modified = true;
-                    }
-
-                    ImGui.Text("Export current build");
-                    ImGui.SameLine();
-                    var rectMyPlayer = SpriteHelper.GetUV(MapIconsIndex.MyPlayer);
-                    ImGui.PushID("charBtn");
-                    if (ImGui.ImageButton(Graphics.GetTextureId("Icons.png"), new Vector2(ImGui.CalcTextSize("A").Y),
-                            rectMyPlayer.TopLeft.ToVector2Num(), rectMyPlayer.BottomRight.ToVector2Num()))
-                    {
-                        trees.Add(new TreeConfig.Tree
-                        {
-                            Tag = "Current character tree",
-                            SkillTreeUrl = PathOfExileUrlDecoder.Encode(GameController.Game.IngameState.ServerData.PassiveSkillIds.ToHashSet(), ESkillTreeType.Character)
-                        });
-                        _selectedBuildData.Modified = true;
-                    }
-
-                    ImGui.PopID();
-
-                    ImGui.SameLine();
-                    var rectTangle = SpriteHelper.GetUV(MapIconsIndex.TangleAltar);
-                    ImGui.PushID("atlasBtn");
-                    if (ImGui.ImageButton(Graphics.GetTextureId("Icons.png"), new Vector2(ImGui.CalcTextSize("A").Y),
-                            rectTangle.TopLeft.ToVector2Num(), rectTangle.BottomRight.ToVector2Num()))
-                    {
-                        trees.Add(new TreeConfig.Tree
-                        {
-                            Tag = "Current atlas tree",
-                            SkillTreeUrl = PathOfExileUrlDecoder.Encode(GameController.Game.IngameState.ServerData.AtlasPassiveSkillIds.ToHashSet(), ESkillTreeType.Atlas)
-                        });
-                        _selectedBuildData.Modified = true;
-                    }
-
-                    ImGui.PopID();
-                    ImGui.Separator();
-
-                    ImGui.InputText("##RenameLabel", ref _buildNameEditorValue, 200, ImGuiInputTextFlags.None);
-                    ImGui.SameLine();
-                    ImGui.BeginDisabled(!CanRename(_buildNameEditorValue));
-                    if (ImGui.Button("Rename Build"))
-                    {
-                        RenameFile(_buildNameEditorValue, Settings.SelectedBuild);
-                    }
-
-                    ImGui.EndDisabled();
-
-                    if (ImGui.Button($"Save Build to File: {Settings.SelectedBuild}") ||
-                        _selectedBuildData.Modified && Settings.SaveChangesAutomatically)
-                    {
-                        _selectedBuildData.Modified = false;
-                        TreeConfig.SaveSettingFile(Path.Join(SkillTreeUrlFilesDir, Settings.SelectedBuild), _selectedBuildData);
-                        ReloadBuildList();
-                    }
-
-                    if (_selectedBuildData.Modified)
-                    {
-                        ImGui.TextColored(Color.Red.ToImguiVec4(), "Unsaved changes detected");
-                    }
-
+                    DrawBuildEdit(trees, contentRegionArea);
                     break;
                 case "Settings":
                     base.DrawSettings();
@@ -473,6 +318,260 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
 
         ImGui.PopStyleVar();
         ImGui.EndChild();
+    }
+
+    private void DrawBuildEdit(List<TreeConfig.Tree> trees, Vector2 contentRegionArea)
+    {
+        if (trees.Count > 0)
+        {
+            ImGui.Separator();
+            var buildLink = _selectedBuildData.BuildLink;
+            if (ImGui.InputText("Forum Thread", ref buildLink, 1024, ImGuiInputTextFlags.None))
+            {
+                _selectedBuildData.BuildLink = buildLink.Replace("\u0000", null);
+                _selectedBuildData.Modified = true;
+            }
+
+            ImGui.Text("Notes");
+            // Keep at max 4k byte size not sure why it crashes when upped, not going to bother dealing with this either.
+            var notes = _selectedBuildData.Notes;
+            if (ImGui.InputTextMultiline("##Notes", ref notes, 150000, new Vector2(contentRegionArea.X - 20, 200)))
+            {
+                _selectedBuildData.Notes = notes.Replace("\u0000", null);
+                _selectedBuildData.Modified = true;
+            }
+
+            ImGui.Separator();
+            ImGui.Columns(5, "EditColums", true);
+            ImGui.SetColumnWidth(0, 30f);
+            ImGui.SetColumnWidth(1, 50f);
+            ImGui.SetColumnWidth(3, 38f);
+            ImGui.Text("");
+            ImGui.NextColumn();
+            ImGui.Text("Move");
+            ImGui.NextColumn();
+            ImGui.Text("Tree Name");
+            ImGui.NextColumn();
+            ImGui.Text("Type");
+            ImGui.NextColumn();
+            ImGui.Text("Skill Tree");
+            ImGui.NextColumn();
+            if (trees.Count != 0)
+                ImGui.Separator();
+            for (var j = 0; j < trees.Count; j++)
+            {
+                ImGui.PushID($"{j}");
+                DrawTreeEdit(trees, j);
+                ImGui.PopID();
+            }
+
+            ImGui.Separator();
+            ImGui.Columns(1, "", false);
+        }
+        else
+        {
+            ImGui.Text("No Data Selected");
+        }
+
+        if (ImGui.Button("+##AN"))
+        {
+            trees.Add(new TreeConfig.Tree());
+            _selectedBuildData.Modified = true;
+        }
+
+        ImGui.Text("Export current build");
+        ImGui.SameLine();
+        var rectMyPlayer = SpriteHelper.GetUV(MapIconsIndex.MyPlayer);
+        ImGui.PushID("charBtn");
+        if (ImGui.ImageButton(Graphics.GetTextureId("Icons.png"), new Vector2(ImGui.CalcTextSize("A").Y),
+                rectMyPlayer.TopLeft.ToVector2Num(), rectMyPlayer.BottomRight.ToVector2Num()))
+        {
+            trees.Add(new TreeConfig.Tree
+            {
+                Tag = "Current character tree",
+                SkillTreeUrl = PathOfExileUrlDecoder.Encode(GameController.Game.IngameState.ServerData.PassiveSkillIds.ToHashSet(), ESkillTreeType.Character)
+            });
+            _selectedBuildData.Modified = true;
+        }
+
+        ImGui.PopID();
+
+        ImGui.SameLine();
+        var rectTangle = SpriteHelper.GetUV(MapIconsIndex.TangleAltar);
+        ImGui.PushID("atlasBtn");
+        if (ImGui.ImageButton(Graphics.GetTextureId("Icons.png"), new Vector2(ImGui.CalcTextSize("A").Y),
+                rectTangle.TopLeft.ToVector2Num(), rectTangle.BottomRight.ToVector2Num()))
+        {
+            trees.Add(new TreeConfig.Tree
+            {
+                Tag = "Current atlas tree",
+                SkillTreeUrl = PathOfExileUrlDecoder.Encode(GameController.Game.IngameState.ServerData.AtlasPassiveSkillIds.ToHashSet(), ESkillTreeType.Atlas)
+            });
+            _selectedBuildData.Modified = true;
+        }
+
+        ImGui.PopID();
+
+        DrawMaxrollImport(trees);
+
+        ImGui.Separator();
+
+        ImGui.InputText("##RenameLabel", ref _buildNameEditorValue, 200, ImGuiInputTextFlags.None);
+        ImGui.SameLine();
+        ImGui.BeginDisabled(!CanRename(_buildNameEditorValue));
+        if (ImGui.Button("Rename Build"))
+        {
+            RenameFile(_buildNameEditorValue, Settings.SelectedBuild);
+        }
+
+        ImGui.EndDisabled();
+
+        if (ImGui.Button($"Save Build to File: {Settings.SelectedBuild}") ||
+            _selectedBuildData.Modified && Settings.SaveChangesAutomatically)
+        {
+            _selectedBuildData.Modified = false;
+            TreeConfig.SaveSettingFile(Path.Join(SkillTreeUrlFilesDir, Settings.SelectedBuild), _selectedBuildData);
+            ReloadBuildList();
+        }
+
+        if (_selectedBuildData.Modified)
+        {
+            ImGui.TextColored(Color.Red.ToImguiVec4(), "Unsaved changes detected");
+        }
+    }
+
+    private void DrawMaxrollImport(List<TreeConfig.Tree> trees)
+    {
+        if (ImGui.InputText("Import maxroll build", ref _maxrollUrlInput, 200))
+        {
+            _selectedMaxrollProgress = -1;
+            _selectedMaxrollVariant = 0;
+            _maxRollDataFetchCancellation?.Cancel();
+            _maxRollDataFetchCancellation = null;
+            _maxRollDataFetchTask = null;
+            if (MaxRollUrlDecoder.IsValidUrl(_maxrollUrlInput))
+            {
+                _maxRollDataFetchCancellation = new CancellationTokenSource();
+                _maxRollDataFetchTask = MaxRollUrlDecoder.FetchNodeList(_maxrollUrlInput, _maxRollDataFetchCancellation.Token);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(_maxrollUrlInput) && !MaxRollUrlDecoder.IsValidUrl(_maxrollUrlInput))
+        {
+            ImGui.TextColored(Color.Red.ToImguiVec4(), "Not a valid maxroll url");
+        }
+
+        if (_maxRollDataFetchTask is { IsCompletedSuccessfully: true })
+        {
+            var data = _maxRollDataFetchTask.Result;
+            if (data.Embed.Variants?.Length is 0 or null)
+            {
+                ImGui.TextColored(Color.Red.ToImguiVec4(), "No variants in the requested build");
+            }
+
+            else
+            {
+                if (data.Embed.Variants.Length != 1)
+                {
+                    if (ImGui.SliderInt("Variant", ref _selectedMaxrollVariant, 0, data.Embed.Variants.Length - 1, null, ImGuiSliderFlags.AlwaysClamp))
+                    {
+                        _selectedMaxrollProgress = data.Embed.Variants[_selectedMaxrollVariant]?.History?.Length ?? 0;
+                    }
+                }
+                else
+                {
+                    _selectedMaxrollVariant = 0;
+                }
+
+                if (_selectedMaxrollProgress == -1)
+                {
+                    _selectedMaxrollProgress = data.Embed.Variants[_selectedMaxrollVariant]?.History?.Length ?? 0;
+                }
+
+                if (data.Embed.Variants[_selectedMaxrollVariant]?.History == null)
+                {
+                    ImGui.TextColored(Color.Red.ToImguiVec4(), "Selected variant does not contain valid build data");
+                }
+                else
+                {
+                    ImGui.SliderInt("Progress", ref _selectedMaxrollProgress, 0, data.Embed.Variants[_selectedMaxrollVariant].History.Length, null, ImGuiSliderFlags.AlwaysClamp);
+                    if (ImGui.Button("Import"))
+                    {
+                        trees.Add(new TreeConfig.Tree
+                        {
+                            Tag = $"Maxroll import ({data.Url}), {_selectedMaxrollProgress} pts",
+                            SkillTreeUrl = PathOfExileUrlDecoder.Encode(
+                                data.Embed.Variants[_selectedMaxrollVariant].History.Take(_selectedMaxrollProgress).Select(x => (ushort)x).ToHashSet(),
+                                data.Embed.Type == "atlas" ? ESkillTreeType.Atlas : ESkillTreeType.Character),
+                        });
+                        _selectedBuildData.Modified = true;
+                    }
+                }
+            }
+        }
+        else if (_maxRollDataFetchTask is { IsCompleted: false })
+        {
+            ImGui.Text("Loading the build data...");
+        }
+        else if (_maxRollDataFetchTask is { IsCompleted: true, IsCompletedSuccessfully: false })
+        {
+            ImGui.TextColored(Color.Red.ToImguiVec4(), $"Data fetch failed: {_maxRollDataFetchTask.Exception}");
+        }
+    }
+
+    private void DrawTreeEdit(List<TreeConfig.Tree> trees, int treeIndex)
+    {
+        if (ImGui.Button("X##REMOVERULE"))
+        {
+            trees.RemoveAt(treeIndex);
+            _selectedBuildData.Modified = true;
+            return;
+        }
+
+        ImGui.NextColumn();
+
+        ImGui.BeginDisabled(treeIndex == 0);
+        if (ImGui.Button("^##MOVERULEUPEDIT"))
+        {
+            MoveElement(trees, treeIndex, true);
+            _selectedBuildData.Modified = true;
+        }
+
+        ImGui.EndDisabled();
+        ImGui.SameLine();
+        ImGui.BeginDisabled(treeIndex == trees.Count - 1);
+        if (ImGui.Button("v##MOVERULEDOWNEDIT"))
+        {
+            MoveElement(trees, treeIndex, false);
+            _selectedBuildData.Modified = true;
+        }
+
+        ImGui.EndDisabled();
+        ImGui.NextColumn();
+        ImGui.PushItemWidth(ImGui.GetContentRegionAvail().X);
+        ImGui.InputText("##TAG", ref trees[treeIndex].Tag, 1024, ImGuiInputTextFlags.AutoSelectAll);
+        ImGui.PopItemWidth();
+        //ImGui.SameLine();
+        ImGui.NextColumn();
+        var iconsIndex = trees[treeIndex].Type switch
+        {
+            ESkillTreeType.Unknown => MapIconsIndex.QuestObject,
+            ESkillTreeType.Character => MapIconsIndex.MyPlayer,
+            ESkillTreeType.Atlas => MapIconsIndex.TangleAltar,
+        };
+        var rect = SpriteHelper.GetUV(iconsIndex);
+        ImGui.Image(Graphics.GetTextureId("Icons.png"), new Vector2(ImGui.CalcTextSize("A").Y), rect.TopLeft.ToVector2Num(),
+            rect.BottomRight.ToVector2Num());
+        ImGui.NextColumn();
+        ImGui.PushItemWidth(ImGui.GetContentRegionAvail().X);
+        if (ImGui.InputText("##GN", ref trees[treeIndex].SkillTreeUrl, 1024, ImGuiInputTextFlags.AutoSelectAll))
+        {
+            trees[treeIndex].ResetType();
+            _selectedBuildData.Modified = true;
+        }
+
+        ImGui.PopItemWidth();
+        ImGui.NextColumn();
     }
 
     private static void MoveElement<T>(List<T> list, int changeIndex, bool moveUp)
