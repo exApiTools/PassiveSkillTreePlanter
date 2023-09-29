@@ -145,30 +145,48 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
             return;
 
         var skillTreeElement = GameController.Game.IngameState.IngameUi.TreePanel;
-        if (!skillTreeElement.IsVisible)
+        var atlasTreeElement = GameController.Game.IngameState.IngameUi.AtlasTreePanel;
+        if (!skillTreeElement.IsVisible && !atlasTreeElement.IsVisible)
             return;
 
         var isOpen = true;
         ImGui.SetNextWindowPos(new Vector2(0, 0), ImGuiCond.FirstUseEver);
         if (ImGui.Begin("#treeSwitcher", ref isOpen, ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar))
         {
-            var trees = _selectedBuildData.Trees.Where(x => x.Type == ESkillTreeType.Character).ToList();
-
-            for (var j = 0; j < trees.Count; j++)
+            if (skillTreeElement.IsVisible)
             {
-                ImGui.BeginDisabled(Settings.LastSelectedCharacterUrl == trees[j].SkillTreeUrl);
-                if (ImGui.Button($"Load {trees[j].Tag}"))
+                var characterTrees = _selectedBuildData.Trees.Where(x => x.Type == ESkillTreeType.Character).ToList();
+
+                for (var j = 0; j < characterTrees.Count; j++)
                 {
-                    _selectedBuildData.SelectedIndex = j;
-                    LoadUrl(trees[j].SkillTreeUrl);
+                    ImGui.BeginDisabled(Settings.LastSelectedCharacterUrl == characterTrees[j].SkillTreeUrl);
+                    if (ImGui.Button($"Load {characterTrees[j].Tag}"))
+                    {
+                        _selectedBuildData.SelectedIndex = j;
+                        LoadUrl(characterTrees[j].SkillTreeUrl);
+                    }
+                    ImGui.EndDisabled();
                 }
-
-                ImGui.EndDisabled();
             }
+            else
+            {
+                var atlasTrees = _selectedBuildData.Trees.Where(x => x.Type == ESkillTreeType.Atlas).ToList();
 
+                for (var j = 0; j < atlasTrees.Count; j++)
+                {
+                    ImGui.BeginDisabled(Settings.LastSelectedAtlasUrl == atlasTrees[j].SkillTreeUrl);
+                    if (ImGui.Button($"Load {atlasTrees[j].Tag}"))
+                    {
+                        _selectedBuildData.SelectedIndex = j;
+                        LoadUrl(atlasTrees[j].SkillTreeUrl);
+                    }
+                    ImGui.EndDisabled();
+                }
+            }
             ImGui.EndMenu();
         }
     }
+
 
     private static string CleanFileName(string fileName)
     {
