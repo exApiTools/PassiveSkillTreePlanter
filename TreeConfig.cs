@@ -57,7 +57,6 @@ public class TreeConfig
         public string Notes { get; set; } = "";
         public List<Tree> Trees { get; set; } = new List<Tree>();
         public string BuildLink { get; set; } = "";
-        public int SelectedIndex { get; set; } = 0;
         internal bool Modified { get; set; }
     }
 }

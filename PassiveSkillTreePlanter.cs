@@ -145,22 +145,27 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
             return;
 
         var skillTreeElement = GameController.Game.IngameState.IngameUi.TreePanel;
-        if (!skillTreeElement.IsVisible)
+        var atlasTreeElement = GameController.Game.IngameState.IngameUi.AtlasTreePanel;
+        if (!skillTreeElement.IsVisible && !atlasTreeElement.IsVisible)
             return;
 
         var isOpen = true;
         ImGui.SetNextWindowPos(new Vector2(0, 0), ImGuiCond.FirstUseEver);
         if (ImGui.Begin("#treeSwitcher", ref isOpen, ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar))
         {
-            var trees = _selectedBuildData.Trees.Where(x => x.Type == ESkillTreeType.Character).ToList();
+            var trees = skillTreeElement.IsVisible
+                ? _selectedBuildData.Trees.Where(x => x.Type == ESkillTreeType.Character).ToList()
+                : _selectedBuildData.Trees.Where(x => x.Type == ESkillTreeType.Atlas).ToList();
 
-            for (var j = 0; j < trees.Count; j++)
+            foreach (var tree in trees)
             {
-                ImGui.BeginDisabled(Settings.LastSelectedCharacterUrl == trees[j].SkillTreeUrl);
-                if (ImGui.Button($"Load {trees[j].Tag}"))
+                var lastSelectedUrl = skillTreeElement.IsVisible
+                    ? Settings.LastSelectedCharacterUrl
+                    : Settings.LastSelectedAtlasUrl;
+                ImGui.BeginDisabled(lastSelectedUrl == tree.SkillTreeUrl);
+                if (ImGui.Button($"Load {tree.Tag}"))
                 {
-                    _selectedBuildData.SelectedIndex = j;
-                    LoadUrl(trees[j].SkillTreeUrl);
+                    LoadUrl(tree.SkillTreeUrl);
                 }
 
                 ImGui.EndDisabled();
@@ -464,18 +469,18 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
         if (_maxRollDataFetchTask is { IsCompletedSuccessfully: true })
         {
             var data = _maxRollDataFetchTask.Result;
-            if (data.Embed.Variants?.Length is 0 or null)
+            if (data.TreeCollection.Variants?.Length is 0 or null)
             {
                 ImGui.TextColored(Color.Red.ToImguiVec4(), "No variants in the requested build");
             }
 
             else
             {
-                if (data.Embed.Variants.Length != 1)
+                if (data.TreeCollection.Variants.Length != 1)
                 {
-                    if (ImGui.SliderInt("Variant", ref _selectedMaxrollVariant, 0, data.Embed.Variants.Length - 1, null, ImGuiSliderFlags.AlwaysClamp))
+                    if (ImGui.SliderInt("Variant", ref _selectedMaxrollVariant, 0, data.TreeCollection.Variants.Length - 1, null, ImGuiSliderFlags.AlwaysClamp))
                     {
-                        _selectedMaxrollProgress = data.Embed.Variants[_selectedMaxrollVariant]?.History?.Length ?? 0;
+                        _selectedMaxrollProgress = data.TreeCollection.Variants[_selectedMaxrollVariant]?.History?.Length ?? 0;
                     }
                 }
                 else
@@ -485,24 +490,25 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
 
                 if (_selectedMaxrollProgress == -1)
                 {
-                    _selectedMaxrollProgress = data.Embed.Variants[_selectedMaxrollVariant]?.History?.Length ?? 0;
+                    _selectedMaxrollProgress = data.TreeCollection.Variants[_selectedMaxrollVariant]?.History?.Length ?? 0;
                 }
 
-                if (data.Embed.Variants[_selectedMaxrollVariant]?.History == null)
+                if (data.TreeCollection.Variants[_selectedMaxrollVariant]?.History == null)
                 {
                     ImGui.TextColored(Color.Red.ToImguiVec4(), "Selected variant does not contain valid build data");
                 }
                 else
                 {
-                    ImGui.SliderInt("Progress", ref _selectedMaxrollProgress, 0, data.Embed.Variants[_selectedMaxrollVariant].History.Length, null, ImGuiSliderFlags.AlwaysClamp);
+                    ImGui.SliderInt("Progress", ref _selectedMaxrollProgress, 0, data.TreeCollection.Variants[_selectedMaxrollVariant].History.Length, null,
+                        ImGuiSliderFlags.AlwaysClamp);
                     if (ImGui.Button("Import"))
                     {
                         trees.Add(new TreeConfig.Tree
                         {
                             Tag = $"Maxroll import ({data.Url}), {_selectedMaxrollProgress} pts",
                             SkillTreeUrl = PathOfExileUrlDecoder.Encode(
-                                data.Embed.Variants[_selectedMaxrollVariant].History.Take(_selectedMaxrollProgress).Select(x => (ushort)x).ToHashSet(),
-                                data.Embed.Type == "atlas" ? ESkillTreeType.Atlas : ESkillTreeType.Character),
+                                data.TreeCollection.Variants[_selectedMaxrollVariant].History.Take(_selectedMaxrollProgress).Select(x => (ushort)x).ToHashSet(),
+                                data.TreeCollection.Type == "atlas" ? ESkillTreeType.Atlas : ESkillTreeType.Character),
                         });
                         _selectedBuildData.Modified = true;
                     }
