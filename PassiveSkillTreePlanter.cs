@@ -145,22 +145,27 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
             return;
 
         var skillTreeElement = GameController.Game.IngameState.IngameUi.TreePanel;
-        if (!skillTreeElement.IsVisible)
+        var atlasTreeElement = GameController.Game.IngameState.IngameUi.AtlasTreePanel;
+        if (!skillTreeElement.IsVisible && !atlasTreeElement.IsVisible)
             return;
 
         var isOpen = true;
         ImGui.SetNextWindowPos(new Vector2(0, 0), ImGuiCond.FirstUseEver);
         if (ImGui.Begin("#treeSwitcher", ref isOpen, ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar))
         {
-            var trees = _selectedBuildData.Trees.Where(x => x.Type == ESkillTreeType.Character).ToList();
+            var trees = skillTreeElement.IsVisible
+                ? _selectedBuildData.Trees.Where(x => x.Type == ESkillTreeType.Character).ToList()
+                : _selectedBuildData.Trees.Where(x => x.Type == ESkillTreeType.Atlas).ToList();
 
-            for (var j = 0; j < trees.Count; j++)
+            foreach (var tree in trees)
             {
-                ImGui.BeginDisabled(Settings.LastSelectedCharacterUrl == trees[j].SkillTreeUrl);
-                if (ImGui.Button($"Load {trees[j].Tag}"))
+                var lastSelectedUrl = skillTreeElement.IsVisible
+                    ? Settings.LastSelectedCharacterUrl
+                    : Settings.LastSelectedAtlasUrl;
+                ImGui.BeginDisabled(lastSelectedUrl == tree.SkillTreeUrl);
+                if (ImGui.Button($"Load {tree.Tag}"))
                 {
-                    _selectedBuildData.SelectedIndex = j;
-                    LoadUrl(trees[j].SkillTreeUrl);
+                    LoadUrl(tree.SkillTreeUrl);
                 }
 
                 ImGui.EndDisabled();
@@ -494,7 +499,8 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
                 }
                 else
                 {
-                    ImGui.SliderInt("Progress", ref _selectedMaxrollProgress, 0, data.TreeCollection.Variants[_selectedMaxrollVariant].History.Length, null, ImGuiSliderFlags.AlwaysClamp);
+                    ImGui.SliderInt("Progress", ref _selectedMaxrollProgress, 0, data.TreeCollection.Variants[_selectedMaxrollVariant].History.Length, null,
+                        ImGuiSliderFlags.AlwaysClamp);
                     if (ImGui.Button("Import"))
                     {
                         trees.Add(new TreeConfig.Tree
