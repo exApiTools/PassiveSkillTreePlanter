@@ -10,7 +10,7 @@ namespace PassiveSkillTreePlanter.UrlDecoders;
 
 public class MaxRollUrlDecoder
 {
-    private static readonly Regex MaxRollUrlRegex = new Regex(@"^https://maxroll.gg/poe/poe-tree/(?<groupId>[^/]+)/(?<treeId>\d+)", RegexOptions.Compiled);
+    private static readonly Regex MaxRollUrlRegex = new Regex(@"^https://maxroll.gg/poe/poe(?:-atlas)?-tree/(?<groupId>[^/]+)(?:/(?<treeId>\d+))?", RegexOptions.Compiled);
 
     public static bool IsValidUrl(string url)
     {
@@ -25,28 +25,40 @@ public class MaxRollUrlDecoder
         }
 
         var groupId = match.Groups["groupId"].Value;
-        var treeId = int.Parse(match.Groups["treeId"].ValueSpan);
         var dataUrl = $"https://poeplanner.maxroll.gg/poeplanner-data/load/{groupId}";
         var dataString = await new HttpClient().GetStringAsync(dataUrl, cancellationToken);
         var data = JsonConvert.DeserializeObject<MaxRollDataRoot>(dataString);
-        return new MaxRollFetchResult(url.Trim(),
-            data?.Embeds?.FirstOrDefault(x => x?.Id == treeId) ?? throw new Exception($"Embed with id {treeId} was not found in the downloaded data"));
+        MaxRollTreeCollection treeCollection;
+        if (match.Groups["treeId"].Success)
+        {
+            var treeId = int.Parse(match.Groups["treeId"].ValueSpan);
+            treeCollection = data?.Embeds?.FirstOrDefault(x => x?.Id == treeId) ?? throw new Exception($"Embed with id {treeId} was not found in the downloaded data");
+        }
+        else
+        {
+            treeCollection = data?.PassiveTree ?? throw new Exception("Non-embedded passive tree was not found in the downloaded data");
+        }
+
+        return new MaxRollFetchResult(url.Trim(), treeCollection);
     }
 }
 
-public record MaxRollFetchResult(string Url, MaxRollEmbed Embed);
+public record MaxRollFetchResult(string Url, MaxRollTreeCollection TreeCollection);
 
 public class MaxRollDataRoot
 {
-    public MaxRollEmbed[] Embeds { get; set; }
+    public MaxRollTreeCollection[] Embeds { get; set; }
+
+    [JsonProperty("passive_tree")]
+    public MaxRollTreeCollection PassiveTree { get; set; }
 }
 
-public class MaxRollEmbed
+public class MaxRollTreeCollection
 {
     public string Type { get; set; }
     public string Name { get; set; }
     public MaxRollVariant[] Variants { get; set; }
-    public int Id { get; set; }
+    public int? Id { get; set; }
 }
 
 public class MaxRollVariant

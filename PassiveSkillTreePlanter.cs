@@ -464,18 +464,18 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
         if (_maxRollDataFetchTask is { IsCompletedSuccessfully: true })
         {
             var data = _maxRollDataFetchTask.Result;
-            if (data.Embed.Variants?.Length is 0 or null)
+            if (data.TreeCollection.Variants?.Length is 0 or null)
             {
                 ImGui.TextColored(Color.Red.ToImguiVec4(), "No variants in the requested build");
             }
 
             else
             {
-                if (data.Embed.Variants.Length != 1)
+                if (data.TreeCollection.Variants.Length != 1)
                 {
-                    if (ImGui.SliderInt("Variant", ref _selectedMaxrollVariant, 0, data.Embed.Variants.Length - 1, null, ImGuiSliderFlags.AlwaysClamp))
+                    if (ImGui.SliderInt("Variant", ref _selectedMaxrollVariant, 0, data.TreeCollection.Variants.Length - 1, null, ImGuiSliderFlags.AlwaysClamp))
                     {
-                        _selectedMaxrollProgress = data.Embed.Variants[_selectedMaxrollVariant]?.History?.Length ?? 0;
+                        _selectedMaxrollProgress = data.TreeCollection.Variants[_selectedMaxrollVariant]?.History?.Length ?? 0;
                     }
                 }
                 else
@@ -485,24 +485,24 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
 
                 if (_selectedMaxrollProgress == -1)
                 {
-                    _selectedMaxrollProgress = data.Embed.Variants[_selectedMaxrollVariant]?.History?.Length ?? 0;
+                    _selectedMaxrollProgress = data.TreeCollection.Variants[_selectedMaxrollVariant]?.History?.Length ?? 0;
                 }
 
-                if (data.Embed.Variants[_selectedMaxrollVariant]?.History == null)
+                if (data.TreeCollection.Variants[_selectedMaxrollVariant]?.History == null)
                 {
                     ImGui.TextColored(Color.Red.ToImguiVec4(), "Selected variant does not contain valid build data");
                 }
                 else
                 {
-                    ImGui.SliderInt("Progress", ref _selectedMaxrollProgress, 0, data.Embed.Variants[_selectedMaxrollVariant].History.Length, null, ImGuiSliderFlags.AlwaysClamp);
+                    ImGui.SliderInt("Progress", ref _selectedMaxrollProgress, 0, data.TreeCollection.Variants[_selectedMaxrollVariant].History.Length, null, ImGuiSliderFlags.AlwaysClamp);
                     if (ImGui.Button("Import"))
                     {
                         trees.Add(new TreeConfig.Tree
                         {
                             Tag = $"Maxroll import ({data.Url}), {_selectedMaxrollProgress} pts",
                             SkillTreeUrl = PathOfExileUrlDecoder.Encode(
-                                data.Embed.Variants[_selectedMaxrollVariant].History.Take(_selectedMaxrollProgress).Select(x => (ushort)x).ToHashSet(),
-                                data.Embed.Type == "atlas" ? ESkillTreeType.Atlas : ESkillTreeType.Character),
+                                data.TreeCollection.Variants[_selectedMaxrollVariant].History.Take(_selectedMaxrollProgress).Select(x => (ushort)x).ToHashSet(),
+                                data.TreeCollection.Type == "atlas" ? ESkillTreeType.Atlas : ESkillTreeType.Character),
                         });
                         _selectedBuildData.Modified = true;
                     }
