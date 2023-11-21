@@ -220,7 +220,7 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
             "Build Edit",
             "Settings",
         };
-        if (ImGui.BeginChild("LeftSettings", new Vector2(150, ImGui.GetContentRegionAvail().Y), false, ImGuiWindowFlags.None))
+        if (ImGui.BeginChild("LeftSettings", new Vector2(150, ImGui.GetContentRegionAvail().Y), ImGuiChildFlags.Border, ImGuiWindowFlags.None))
             for (var i = 0; i < settingName.Length; i++)
                 if (ImGui.Selectable(settingName[i], _selectedSettingsTab == i))
                     _selectedSettingsTab = i;
@@ -229,7 +229,7 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
         ImGui.SameLine();
         ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 5.0f);
         var contentRegionArea = ImGui.GetContentRegionAvail();
-        if (ImGui.BeginChild("RightSettings", contentRegionArea, true, ImGuiWindowFlags.None))
+        if (ImGui.BeginChild("RightSettings", contentRegionArea, ImGuiChildFlags.Border, ImGuiWindowFlags.None))
         {
             var trees = _selectedBuildData.Trees;
             switch (settingName[_selectedSettingsTab])
@@ -387,8 +387,7 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
         ImGui.Text("Export current build");
         ImGui.SameLine();
         var rectMyPlayer = SpriteHelper.GetUV(MapIconsIndex.MyPlayer);
-        ImGui.PushID("charBtn");
-        if (ImGui.ImageButton(Graphics.GetTextureId("Icons.png"), new Vector2(ImGui.CalcTextSize("A").Y),
+        if (ImGui.ImageButton("charBtn", Graphics.GetTextureId("Icons.png"), new Vector2(ImGui.CalcTextSize("A").Y),
                 rectMyPlayer.TopLeft.ToVector2Num(), rectMyPlayer.BottomRight.ToVector2Num()))
         {
             trees.Add(new TreeConfig.Tree
@@ -399,12 +398,9 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
             _selectedBuildData.Modified = true;
         }
 
-        ImGui.PopID();
-
         ImGui.SameLine();
         var rectTangle = SpriteHelper.GetUV(MapIconsIndex.TangleAltar);
-        ImGui.PushID("atlasBtn");
-        if (ImGui.ImageButton(Graphics.GetTextureId("Icons.png"), new Vector2(ImGui.CalcTextSize("A").Y),
+        if (ImGui.ImageButton("atlasBtn", Graphics.GetTextureId("Icons.png"), new Vector2(ImGui.CalcTextSize("A").Y),
                 rectTangle.TopLeft.ToVector2Num(), rectTangle.BottomRight.ToVector2Num()))
         {
             trees.Add(new TreeConfig.Tree
@@ -414,8 +410,6 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
             });
             _selectedBuildData.Modified = true;
         }
-
-        ImGui.PopID();
 
         DrawMaxrollImport(trees);
 
