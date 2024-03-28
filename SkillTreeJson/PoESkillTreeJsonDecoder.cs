@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using ExileCore;
 using Newtonsoft.Json;
@@ -46,7 +47,7 @@ public class PoESkillTreeJsonDecoder
                 bJevel = nd.Value.IsJewelSocket,
                 bMastery = nd.Value.IsMastery,
                 bMult = nd.Value.IsMultipleChoice,
-                linkedNodes = nd.Value.Out,
+                linkedNodes = [..nd.Value.Out ?? [], .. nd.Value.In ?? []],
                 bKeyStone = nd.Value.IsKeystone,
                 Constants = SkillTree.Constants,
             };
