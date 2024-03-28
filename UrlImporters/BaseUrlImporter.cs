@@ -59,7 +59,7 @@ public abstract class BaseUrlImporter
             }
             else
             {
-                var hasTreeName = string.IsNullOrEmpty(data[_selectedVariant].Name);
+                var validTreeName = !string.IsNullOrEmpty(data[_selectedVariant]?.Name);
 
                 if (data.Count != 1)
                 {
@@ -68,7 +68,7 @@ public abstract class BaseUrlImporter
                             ref _selectedVariant,
                             0,
                             data.Count - 1,
-                            hasTreeName ? null : data[_selectedVariant].Name,
+                            validTreeName ? data[_selectedVariant].Name : null,
                             ImGuiSliderFlags.AlwaysClamp
                         ))
                     {
@@ -102,9 +102,9 @@ public abstract class BaseUrlImporter
 
                         return new TreeConfig.Tree
                         {
-                            Tag = hasTreeName
-                                ? $"{Name} import ({data[_selectedVariant].Url}), {_selectedProgress} pts"
-                                : $"{data[_selectedVariant].Name}, {_selectedProgress} pts",
+                            Tag = validTreeName
+                                ? $"{data[_selectedVariant].Name}, {_selectedProgress} pts"
+                                : $"{Name} import ({data[_selectedVariant].Url}), {_selectedProgress} pts",
                             SkillTreeUrl = PathOfExileUrlDecoder.Encode(
                                 data[_selectedVariant].Passives.Take(_selectedProgress).ToHashSet(),
                                 data[_selectedVariant].TreeType
