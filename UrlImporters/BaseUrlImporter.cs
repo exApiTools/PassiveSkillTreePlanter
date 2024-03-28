@@ -59,9 +59,18 @@ public abstract class BaseUrlImporter
             }
             else
             {
+                var validTreeName = !string.IsNullOrEmpty(data[_selectedVariant]?.Name);
+
                 if (data.Count != 1)
                 {
-                    if (ImGui.SliderInt("Variant", ref _selectedVariant, 0, data.Count - 1, null, ImGuiSliderFlags.AlwaysClamp))
+                    if (ImGui.SliderInt(
+                            "Tree",
+                            ref _selectedVariant,
+                            0,
+                            data.Count - 1,
+                            validTreeName ? data[_selectedVariant].Name : null,
+                            ImGuiSliderFlags.AlwaysClamp
+                        ))
                     {
                         _selectedProgress = data[_selectedVariant]?.Passives?.Count ?? 0;
                     }
@@ -90,12 +99,16 @@ public abstract class BaseUrlImporter
                     if (ImGui.Button("Import"))
                     {
                         ImGui.TreePop();
+
                         return new TreeConfig.Tree
                         {
-                            Tag = $"{Name} import ({data[_selectedVariant].Url}), {_selectedProgress} pts",
+                            Tag = validTreeName
+                                ? $"{data[_selectedVariant].Name}, {_selectedProgress} pts"
+                                : $"{Name} import ({data[_selectedVariant].Url}), {_selectedProgress} pts",
                             SkillTreeUrl = PathOfExileUrlDecoder.Encode(
                                 data[_selectedVariant].Passives.Take(_selectedProgress).ToHashSet(),
-                                data[_selectedVariant].TreeType),
+                                data[_selectedVariant].TreeType
+                            )
                         };
                     }
                 }
