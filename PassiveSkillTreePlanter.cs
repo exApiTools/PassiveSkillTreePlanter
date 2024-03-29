@@ -257,15 +257,27 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
             {
                 case "Build Selection":
                     if (ImGui.Button("Open Build Folder"))
-                        Process.Start(SkillTreeUrlFilesDir);
+                        Process.Start("explorer.exe", Path.Join(ConfigDirectory, "Builds"));
 
                     ImGui.SameLine();
                     if (ImGui.Button("(Re)Load List"))
                         ReloadBuildList();
 
-                    ImGui.SameLine();
-                    if (ImGui.Button("Open Forum Thread"))
-                        Process.Start(_selectedBuildData.BuildLink);
+                    if (!string.IsNullOrEmpty(_selectedBuildData.BuildLink))
+                    {
+                        ImGui.SameLine();
+
+                        if (ImGui.Button("Open Forum Thread"))
+                        {
+                            Process.Start(
+                                new ProcessStartInfo(_selectedBuildData.BuildLink)
+                                {
+                                    UseShellExecute = true // required for urls
+                                }
+                            );
+                        }
+                    }
+
 
                     var newBuildName = ImGuiExtension.ComboBox("Builds", Settings.SelectedBuild,
                         BuildFiles, out var buildSelected, ImGuiComboFlags.HeightLarge);
@@ -771,6 +783,11 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
         {
             foreach (var link in allConnections)
             {
+                if (NodeNameEndsWithGateway(link.ids.Item1) && NodeNameEndsWithGateway(link.ids.Item2))
+                {
+                    continue;
+                }
+
                 var node1 = treeData.SkillNodes[link.ids.Item1];
                 var node2 = treeData.SkillNodes[link.ids.Item2];
                 var node1Pos = baseOffset + node1.DrawPosition * scale;
@@ -786,6 +803,13 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
                     ConnectionType.Allocated => Settings.PickedBorderColor,
                     _ => Color.Orange,
                 });
+
+                continue;
+
+                bool NodeNameEndsWithGateway(ushort nodeId)
+                {
+                    return treeData.SkillNodes[nodeId].Name.EndsWith(" gateway", StringComparison.OrdinalIgnoreCase);
+                }
             }
         }
 

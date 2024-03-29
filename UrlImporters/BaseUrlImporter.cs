@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ExileCore.Shared.Helpers;
 using SharpDX;
+using System;
 
 namespace PassiveSkillTreePlanter.UrlImporters;
 
@@ -99,6 +100,9 @@ public abstract class BaseUrlImporter
                     if (ImGui.Button("Import"))
                     {
                         ImGui.TreePop();
+
+                        // increment automatically to allow for quick importing
+                        _selectedVariant = Math.Min(_selectedVariant + 1, data.Count - 1);
 
                         return new TreeConfig.Tree
                         {
