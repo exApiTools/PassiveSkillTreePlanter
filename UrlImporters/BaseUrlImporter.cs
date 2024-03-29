@@ -101,19 +101,23 @@ public abstract class BaseUrlImporter
                     {
                         ImGui.TreePop();
 
-                        // increment automatically to allow for quick importing
-                        _selectedVariant = Math.Min(_selectedVariant + 1, data.Count - 1);
-
-                        return new TreeConfig.Tree
+                        var tree = new TreeConfig.Tree
                         {
-                            Tag = validTreeName
-                                ? $"{data[_selectedVariant].Name}, {_selectedProgress} pts"
+                            Tag = validTreeName ? $"{data[_selectedVariant].Name}, {_selectedProgress} pts"
                                 : $"{Name} import ({data[_selectedVariant].Url}), {_selectedProgress} pts",
                             SkillTreeUrl = PathOfExileUrlDecoder.Encode(
                                 data[_selectedVariant].Passives.Take(_selectedProgress).ToHashSet(),
                                 data[_selectedVariant].TreeType
                             )
                         };
+
+                        if (data.Count != 1)
+                        {
+                            _selectedVariant = Math.Min(_selectedVariant + 1, data.Count - 1);
+                            _selectedProgress = data[_selectedVariant]?.Passives?.Count ?? 0;
+                        }
+
+                        return tree;
                     }
                 }
             }
