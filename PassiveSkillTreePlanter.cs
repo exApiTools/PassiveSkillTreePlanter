@@ -804,8 +804,6 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
                     _ => Color.Orange,
                 });
 
-                continue;
-
                 bool NodeNameEndsWithGateway(ushort nodeId)
                 {
                     return treeData.SkillNodes[nodeId].Name.EndsWith(" gateway", StringComparison.OrdinalIgnoreCase);
