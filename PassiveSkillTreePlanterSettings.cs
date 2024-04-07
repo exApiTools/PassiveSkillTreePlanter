@@ -16,7 +16,7 @@ public class PassiveSkillTreePlanterSettings : ISettings
     public ColorNode UnpickedBorderColor { get; set; } = new ColorNode(Color.Green);
     public ColorNode WrongPickedBorderColor { get; set; } = new ColorNode(Color.Red);
 
-    public ToggleNode EnableEzTreeChanger { get; set; } = new ToggleNode(true);
+    public ToggleNode ShowControlPanel { get; set; } = new ToggleNode(true);
     public ToggleNode SaveChangesAutomatically { get; set; } = new ToggleNode(true);
     public ToggleNode Enable { get; set; } = new ToggleNode(false);
 }

@@ -5,14 +5,19 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Xml.Linq;
 using ExileCore;
 using ExileCore.PoEMemory.Elements;
+using ExileCore.Shared;
 using ExileCore.Shared.AtlasHelper;
 using ExileCore.Shared.Enums;
 using ExileCore.Shared.Helpers;
 using ImGuiNET;
 using PassiveSkillTreePlanter.SkillTreeJson;
+using PassiveSkillTreePlanter.TreeGraph;
 using PassiveSkillTreePlanter.UrlDecoders;
+using PassiveSkillTreePlanter.UrlImporters;
 using SharpDX;
 using Vector2 = System.Numerics.Vector2;
 
@@ -26,6 +31,13 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
     private readonly PoESkillTreeJsonDecoder _skillTreeData = new PoESkillTreeJsonDecoder();
     private readonly PoESkillTreeJsonDecoder _atlasTreeData = new PoESkillTreeJsonDecoder();
 
+    private readonly List<BaseUrlImporter> _importers =
+    [
+        new MaxrollTreeImporter(),
+        new PobbinTreeImporter(),
+        new PobCodeImporter(),
+    ];
+
     //List of nodes decoded from URL
     private HashSet<ushort> _characterUrlNodeIds = new HashSet<ushort>();
     private HashSet<ushort> _atlasUrlNodeIds = new HashSet<ushort>();
@@ -33,14 +45,8 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
     private int _selectedSettingsTab;
     private string _addNewBuildFile = "";
     private string _buildNameEditorValue;
-
-    private string _maxrollUrlInput = "";
-    private Task<MaxRollFetchResult> _maxRollDataFetchTask;
-    private CancellationTokenSource _maxRollDataFetchCancellation;
-    private int _selectedMaxrollVariant;
-    private int _selectedMaxrollProgress = -1;
-
     private AtlasTexture _ringImage;
+    private SyncTask<bool> _currentTask;
 
     private List<string> BuildFiles { get; set; } = new List<string>();
 
@@ -135,33 +141,36 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
 
     public override void Render()
     {
-        DrawOverlays();
-        DrawTreeSwitcher();
+        DrawTreeOverlay(GameController.Game.IngameState.IngameUi.TreePanel.AsObject<TreePanel>(),
+            _skillTreeData, _characterUrlNodeIds,
+            () => GameController.Game.IngameState.ServerData.PassiveSkillIds.ToHashSet(),
+            ESkillTreeType.Character);
+        DrawTreeOverlay(GameController.Game.IngameState.IngameUi.AtlasTreePanel.AsObject<TreePanel>(),
+            _atlasTreeData, _atlasUrlNodeIds,
+            () => GameController.Game.IngameState.ServerData.AtlasPassiveSkillIds.ToHashSet(),
+            ESkillTreeType.Atlas);
+
+        TaskUtils.RunOrRestart(ref _currentTask, () => null);
     }
 
-    private void DrawTreeSwitcher()
+    private void DrawControlPanel(ESkillTreeType skillTreeType, TreePanel treePanel, IReadOnlySet<ushort> allocatedNodeIds, IReadOnlySet<ushort> targetNodeIds)
     {
-        if (!Settings.EnableEzTreeChanger)
-            return;
-
-        var skillTreeElement = GameController.Game.IngameState.IngameUi.TreePanel;
-        var atlasTreeElement = GameController.Game.IngameState.IngameUi.AtlasTreePanel;
-        if (!skillTreeElement.IsVisible && !atlasTreeElement.IsVisible)
+        if (!Settings.ShowControlPanel)
             return;
 
         var isOpen = true;
         ImGui.SetNextWindowPos(new Vector2(0, 0), ImGuiCond.FirstUseEver);
         if (ImGui.Begin("#treeSwitcher", ref isOpen, ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar))
         {
-            var trees = skillTreeElement.IsVisible
-                ? _selectedBuildData.Trees.Where(x => x.Type == ESkillTreeType.Character).ToList()
-                : _selectedBuildData.Trees.Where(x => x.Type == ESkillTreeType.Atlas).ToList();
+            var trees = _selectedBuildData.Trees.Where(x => x.Type == skillTreeType).ToList();
 
             foreach (var tree in trees)
             {
-                var lastSelectedUrl = skillTreeElement.IsVisible
-                    ? Settings.LastSelectedCharacterUrl
-                    : Settings.LastSelectedAtlasUrl;
+                var lastSelectedUrl = skillTreeType switch
+                {
+                    ESkillTreeType.Character => Settings.LastSelectedCharacterUrl,
+                    ESkillTreeType.Atlas => Settings.LastSelectedAtlasUrl,
+                };
                 ImGui.BeginDisabled(lastSelectedUrl == tree.SkillTreeUrl);
                 if (ImGui.Button($"Load {tree.Tag}"))
                 {
@@ -169,6 +178,18 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
                 }
 
                 ImGui.EndDisabled();
+            }
+
+            if (ImGui.Button("Operate tree"))
+            {
+                _currentTask = ChangeTree(allocatedNodeIds, targetNodeIds, treePanel);
+            }
+
+            if (ImGui.Button("Show/hide editor"))
+            {
+                _editorShown = !_editorShown;
+                _nodeMap.Clear();
+                _pathingNodes = null;
             }
 
             ImGui.EndMenu();
@@ -236,15 +257,27 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
             {
                 case "Build Selection":
                     if (ImGui.Button("Open Build Folder"))
-                        Process.Start(SkillTreeUrlFilesDir);
+                        Process.Start("explorer.exe", Path.Join(ConfigDirectory, "Builds"));
 
                     ImGui.SameLine();
                     if (ImGui.Button("(Re)Load List"))
                         ReloadBuildList();
 
-                    ImGui.SameLine();
-                    if (ImGui.Button("Open Forum Thread"))
-                        Process.Start(_selectedBuildData.BuildLink);
+                    if (!string.IsNullOrEmpty(_selectedBuildData.BuildLink))
+                    {
+                        ImGui.SameLine();
+
+                        if (ImGui.Button("Open Forum Thread"))
+                        {
+                            Process.Start(
+                                new ProcessStartInfo(_selectedBuildData.BuildLink)
+                                {
+                                    UseShellExecute = true // required for urls
+                                }
+                            );
+                        }
+                    }
+
 
                     var newBuildName = ImGuiExtension.ComboBox("Builds", Settings.SelectedBuild,
                         BuildFiles, out var buildSelected, ImGuiComboFlags.HeightLarge);
@@ -411,7 +444,14 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
             _selectedBuildData.Modified = true;
         }
 
-        DrawMaxrollImport(trees);
+        foreach (var importer in _importers)
+        {
+            if (importer.DrawAddInterface() is { } newTree)
+            {
+                trees.Add(newTree);
+                _selectedBuildData.Modified = true;
+            }
+        }
 
         ImGui.Separator();
 
@@ -436,86 +476,6 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
         if (_selectedBuildData.Modified)
         {
             ImGui.TextColored(Color.Red.ToImguiVec4(), "Unsaved changes detected");
-        }
-    }
-
-    private void DrawMaxrollImport(List<TreeConfig.Tree> trees)
-    {
-        if (ImGui.InputText("Import maxroll build", ref _maxrollUrlInput, 200))
-        {
-            _selectedMaxrollProgress = -1;
-            _selectedMaxrollVariant = 0;
-            _maxRollDataFetchCancellation?.Cancel();
-            _maxRollDataFetchCancellation = null;
-            _maxRollDataFetchTask = null;
-            if (MaxRollUrlDecoder.IsValidUrl(_maxrollUrlInput))
-            {
-                _maxRollDataFetchCancellation = new CancellationTokenSource();
-                _maxRollDataFetchTask = MaxRollUrlDecoder.FetchNodeList(_maxrollUrlInput, _maxRollDataFetchCancellation.Token);
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(_maxrollUrlInput) && !MaxRollUrlDecoder.IsValidUrl(_maxrollUrlInput))
-        {
-            ImGui.TextColored(Color.Red.ToImguiVec4(), "Not a valid maxroll url");
-        }
-
-        if (_maxRollDataFetchTask is { IsCompletedSuccessfully: true })
-        {
-            var data = _maxRollDataFetchTask.Result;
-            if (data.TreeCollection.Variants?.Length is 0 or null)
-            {
-                ImGui.TextColored(Color.Red.ToImguiVec4(), "No variants in the requested build");
-            }
-
-            else
-            {
-                if (data.TreeCollection.Variants.Length != 1)
-                {
-                    if (ImGui.SliderInt("Variant", ref _selectedMaxrollVariant, 0, data.TreeCollection.Variants.Length - 1, null, ImGuiSliderFlags.AlwaysClamp))
-                    {
-                        _selectedMaxrollProgress = data.TreeCollection.Variants[_selectedMaxrollVariant]?.History?.Length ?? 0;
-                    }
-                }
-                else
-                {
-                    _selectedMaxrollVariant = 0;
-                }
-
-                if (_selectedMaxrollProgress == -1)
-                {
-                    _selectedMaxrollProgress = data.TreeCollection.Variants[_selectedMaxrollVariant]?.History?.Length ?? 0;
-                }
-
-                if (data.TreeCollection.Variants[_selectedMaxrollVariant]?.History == null)
-                {
-                    ImGui.TextColored(Color.Red.ToImguiVec4(), "Selected variant does not contain valid build data");
-                }
-                else
-                {
-                    ImGui.SliderInt("Progress", ref _selectedMaxrollProgress, 0, data.TreeCollection.Variants[_selectedMaxrollVariant].History.Length, null,
-                        ImGuiSliderFlags.AlwaysClamp);
-                    if (ImGui.Button("Import"))
-                    {
-                        trees.Add(new TreeConfig.Tree
-                        {
-                            Tag = $"Maxroll import ({data.Url}), {_selectedMaxrollProgress} pts",
-                            SkillTreeUrl = PathOfExileUrlDecoder.Encode(
-                                data.TreeCollection.Variants[_selectedMaxrollVariant].History.Take(_selectedMaxrollProgress).Select(x => (ushort)x).ToHashSet(),
-                                data.TreeCollection.Type == "atlas" ? ESkillTreeType.Atlas : ESkillTreeType.Character),
-                        });
-                        _selectedBuildData.Modified = true;
-                    }
-                }
-            }
-        }
-        else if (_maxRollDataFetchTask is { IsCompleted: false })
-        {
-            ImGui.Text("Loading the build data...");
-        }
-        else if (_maxRollDataFetchTask is { IsCompleted: true, IsCompletedSuccessfully: false })
-        {
-            ImGui.TextColored(Color.Red.ToImguiVec4(), $"Data fetch failed: {_maxRollDataFetchTask.Exception}");
         }
     }
 
@@ -604,7 +564,7 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
                 continue;
             }
 
-            foreach (var lNodeId in node.linkedNodes.Where(currentNodes.Contains))
+            foreach (var lNodeId in node.linkedNodes?.Where(currentNodes.Contains) ?? [])
             {
                 if (!nodeDict.ContainsKey(lNodeId))
                 {
@@ -614,17 +574,7 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
         }
     }
 
-    private void DrawOverlays()
-    {
-        DrawTreeOverlay(GameController.Game.IngameState.IngameUi.TreePanel.AsObject<TreePanel>(),
-            _skillTreeData, _characterUrlNodeIds,
-            () => GameController.Game.IngameState.ServerData.PassiveSkillIds.ToHashSet());
-        DrawTreeOverlay(GameController.Game.IngameState.IngameUi.AtlasTreePanel.AsObject<TreePanel>(),
-            _atlasTreeData, _atlasUrlNodeIds,
-            () => GameController.Game.IngameState.ServerData.AtlasPassiveSkillIds.ToHashSet());
-    }
-
-    private void DrawTreeOverlay(TreePanel treePanel, PoESkillTreeJsonDecoder treeData, IReadOnlySet<ushort> targetNodeIds, Func<IReadOnlySet<ushort>> allocatedNodeIds)
+    private void DrawTreeOverlay(TreePanel treePanel, PoESkillTreeJsonDecoder treeData, IReadOnlySet<ushort> targetNodeIds, Func<IReadOnlySet<ushort>> allocatedNodeIdsFunc, ESkillTreeType type)
     {
         if (targetNodeIds is not { Count: > 0 })
         {
@@ -639,7 +589,10 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
         var canvas = treePanel.CanvasElement;
         var baseOffset = new Vector2(canvas.Center.X, canvas.Center.Y);
 
-        DrawTreeOverlay(allocatedNodeIds(), targetNodeIds, treeData, canvas.Scale, baseOffset);
+        var allocatedNodeIds = allocatedNodeIdsFunc();
+        DrawTreeOverlay(allocatedNodeIds, targetNodeIds, treeData, canvas.Scale, baseOffset);
+        DrawTreeEditOverlay(treeData, canvas.Scale, baseOffset);
+        DrawControlPanel(type, treePanel, allocatedNodeIds, targetNodeIds);
     }
 
     private enum ConnectionType
@@ -649,11 +602,153 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
         Allocated,
     }
 
+    private async SyncTask<bool> ChangeTree(IReadOnlySet<ushort> allocatedNodeIds, IReadOnlySet<ushort> targetNodeIds, TreePanel panel)
+    {
+        var passivesById = panel.Passives.DistinctBy(x => x.PassiveSkill.PassiveId).ToDictionary(x => x.PassiveSkill.PassiveId);
+        var wrongNodes = allocatedNodeIds.Except(targetNodeIds).ToHashSet();
+        var nodesToTake = targetNodeIds.Except(allocatedNodeIds).ToHashSet();
+        while (panel.IsVisible)
+        {
+            var nodeToRemove = wrongNodes.Select(arg => passivesById.GetValueOrDefault(arg)).FirstOrDefault(x => x is { IsAllocatedForPlan: true, CanDeallocate: true });
+            if (nodeToRemove != null)
+            {
+                var windowRect = GameController.Window.GetWindowRectangleTimeCache.TopLeft.ToVector2Num();
+                if (panel.RefundButton.IsVisible)
+                {
+                    if (panel.RefundButton.HasShinyHighlight)
+                    {
+                        DebugWindow.LogMsg("Clicking refund button");
+                        Input.Click(MouseButtons.Left);
+                    }
+                    else
+                    {
+                        DebugWindow.LogMsg("Hovering refund button");
+                        Input.SetCursorPos(windowRect + panel.RefundButton.GetClientRectCache.Center.ToVector2Num());
+                    }
+
+                    await Task.Delay(250);
+                    continue;
+                }
+
+                if (GameController.IngameState.UIHover?.Address == nodeToRemove.Address)
+                {
+                    DebugWindow.LogMsg($"Clicking passive {nodeToRemove.PassiveSkill?.PassiveId} ({nodeToRemove.PassiveSkill?.Name})");
+                    Input.Click(MouseButtons.Left);
+                }
+                else
+                {
+                    DebugWindow.LogMsg($"Hovering passive {nodeToRemove.PassiveSkill?.PassiveId} ({nodeToRemove.PassiveSkill?.Name})");
+                    Input.SetCursorPos(windowRect + nodeToRemove.GetClientRectCache.Center.ToVector2Num());
+                }
+
+                await Task.Delay(250);
+            }
+            else if (panel.RefundButton.IsVisible)
+            {
+                var nodeToTake = nodesToTake.Select(arg => passivesById.GetValueOrDefault(arg)).FirstOrDefault(x => x is { IsAllocatedForPlan: false, CanAllocate: true });
+                if (nodeToTake != null)
+                {
+                    var windowRect = GameController.Window.GetWindowRectangleTimeCache.TopLeft.ToVector2Num();
+
+                    if (GameController.IngameState.UIHover?.Address == nodeToTake.Address)
+                    {
+                        DebugWindow.LogMsg($"Clicking passive {nodeToTake.PassiveSkill?.PassiveId} ({nodeToTake.PassiveSkill?.Name})");
+                        Input.Click(MouseButtons.Left);
+                    }
+                    else
+                    {
+                        DebugWindow.LogMsg($"Hovering passive {nodeToTake.PassiveSkill?.PassiveId} ({nodeToTake.PassiveSkill?.Name})");
+                        Input.SetCursorPos(windowRect + nodeToTake.GetClientRectCache.Center.ToVector2Num());
+                    }
+
+                    await Task.Delay(250);
+                }
+                else
+                {
+                    break;
+                }
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return true;
+    }
+
+    private Dictionary<uint, bool> _nodeMap = new();
+    private Task<HashSet<uint>> _pathingNodes;
+    private bool _editorShown;
+
+    private void DrawTreeEditOverlay(PoESkillTreeJsonDecoder treeData, float scale, Vector2 baseOffset)
+    {
+        if (!_editorShown)
+        {
+            return;
+        }
+
+        var nodes = treeData.SkillNodes.Where(x => x.Value.linkedNodes != null).Select(x => x.Value).ToList();
+        var pathingNodes = _pathingNodes is { IsCompletedSuccessfully: true } ? _pathingNodes.Result : [];
+        DebugWindow.LogMsg($"Solved optimization in {pathingNodes.Count} nodes");
+        foreach (var node in nodes)
+        {
+            var drawSize = node.DrawSize * scale;
+            var posX = baseOffset.X + node.DrawPosition.X * scale;
+            var posY = baseOffset.Y + node.DrawPosition.Y * scale;
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowMinSize, Vector2.Zero);
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
+            ImGui.SetNextWindowPos(new Vector2(posX, posY) - new Vector2(drawSize / 2));
+            ImGui.SetNextWindowSize(new Vector2(drawSize));
+            ImGui.PushStyleColor(ImGuiCol.WindowBg, Color.Transparent.ToImgui());
+            ImGui.PushStyleColor(ImGuiCol.Border,
+                _nodeMap.GetValueOrDefault(node.Id, false) ? Color.Green.ToImgui() : pathingNodes.Contains(node.Id) ? Color.Blue.ToImgui() : Color.Red.ToImgui());
+            foreach (var linkedNode in node.linkedNodes)
+            {
+                if (linkedNode < node.Id)
+                {
+                    continue;
+                }
+
+                if (pathingNodes.Contains(linkedNode) && pathingNodes.Contains(node.Id))
+                {
+                    Graphics.DrawLine(treeData.SkillNodes[linkedNode].DrawPosition*scale+baseOffset, new Vector2(posX, posY), 5, Color.Blue);
+                }
+            }
+            if (ImGui.Begin($"planter_node_{node.Id}", ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoTitleBar))
+            {
+                ImGui.SetCursorPos(Vector2.Zero);
+                if (ImGui.InvisibleButton("button", ImGui.GetContentRegionAvail()))
+                {
+                    _nodeMap[node.Id] = !_nodeMap.GetValueOrDefault(node.Id, false);
+                    var nodesToPick = _nodeMap.Where(x => x.Value).Select(x => new Vertex((int)x.Key)).ToList();
+                    _pathingNodes = Task.Run(() =>
+                    {
+                        var matrix = nodes.ToDictionary(x => new Vertex(x.Id), x => x.linkedNodes.Select(l => new Vertex(l)).ToList());
+                        var graph = new Graph(matrix);
+                        return GraphOptimizer.ReduceGraph(graph, nodesToPick).Select(x => (uint)x.Id).ToHashSet();
+                    });
+                }
+
+                ImGui.End();
+            }
+
+            ImGui.PopStyleColor();
+            ImGui.PopStyleColor();
+            ImGui.PopStyleVar();
+            ImGui.PopStyleVar();
+        }
+    }
+
     private void DrawTreeOverlay(IReadOnlySet<ushort> allocatedNodeIds, IReadOnlySet<ushort> targetNodeIds, PoESkillTreeJsonDecoder treeData, float scale, Vector2 baseOffset)
     {
+        if (_editorShown)
+        {
+            return;
+        }
         var wrongNodes = allocatedNodeIds.Except(targetNodeIds).ToHashSet();
         var missingNodes = targetNodeIds.Except(allocatedNodeIds).ToHashSet();
-        var allNodes = targetNodeIds.Union(allocatedNodeIds).Select(x => treeData.SkillNodes.GetValueOrDefault(x)).Where(x => x != null).ToList();
+        var allNodes = targetNodeIds.Union(allocatedNodeIds).Select(x => treeData.SkillNodes.GetValueOrDefault(x)).Where(x => x?.linkedNodes != null).ToList();
         var allConnections = allNodes
             .SelectMany(node => node.linkedNodes
                 .Where(treeData.SkillNodes.ContainsKey)
@@ -688,6 +783,11 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
         {
             foreach (var link in allConnections)
             {
+                if (NodeNameEndsWithGateway(link.ids.Item1) && NodeNameEndsWithGateway(link.ids.Item2))
+                {
+                    continue;
+                }
+
                 var node1 = treeData.SkillNodes[link.ids.Item1];
                 var node2 = treeData.SkillNodes[link.ids.Item2];
                 var node1Pos = baseOffset + node1.DrawPosition * scale;
@@ -703,6 +803,11 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
                     ConnectionType.Allocated => Settings.PickedBorderColor,
                     _ => Color.Orange,
                 });
+
+                bool NodeNameEndsWithGateway(ushort nodeId)
+                {
+                    return treeData.SkillNodes[nodeId].Name.EndsWith(" gateway", StringComparison.OrdinalIgnoreCase);
+                }
             }
         }
 

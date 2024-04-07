@@ -89,7 +89,7 @@ public class Node
     public int Orbit { get; set; }
     public long OrbitIndex { get; set; }
     public List<ushort> Out { get; set; }
-    public List<long> In { get; set; }
+    public List<ushort> In { get; set; }
     public List<string> ReminderText { get; set; }
     public bool IsMastery { get; set; }
     public long GrantedStrength { get; set; }
