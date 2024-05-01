@@ -1,4 +1,5 @@
-﻿using ExileCore.Shared.Interfaces;
+﻿using ExileCore.Shared.Attributes;
+using ExileCore.Shared.Interfaces;
 using ExileCore.Shared.Nodes;
 using SharpDX;
 
@@ -6,8 +7,13 @@ namespace PassiveSkillTreePlanter;
 
 public class PassiveSkillTreePlanterSettings : ISettings
 {
+    [IgnoreMenu]
     public string SelectedBuild { get; set; } = string.Empty;
+
+    [IgnoreMenu]
     public string LastSelectedCharacterUrl { get; set; }
+
+    [IgnoreMenu]
     public string LastSelectedAtlasUrl { get; set; }
 
     public RangeNode<int> LineWidth { get; set; } = new(3, 0, 5);

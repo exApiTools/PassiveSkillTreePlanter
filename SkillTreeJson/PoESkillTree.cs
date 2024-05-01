@@ -43,8 +43,6 @@ public class FlavourTextRect
 
 public class Constants
 {
-    public Classes Classes { get; set; }
-    public CharacterAttributes CharacterAttributes { get; set; }
     public long PssCentreInnerRadius { get; set; }
     public List<int> SkillsPerOrbit { get; set; }
     public List<int> OrbitRadii { get; set; }

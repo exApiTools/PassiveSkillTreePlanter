@@ -11,12 +11,8 @@ public class TreeEncoder
     {
         try
         {
-            if (PoePlannerUrlDecoder.UrlMatch(url))
-            {
-                return (PoePlannerUrlDecoder.Decode(url), ESkillTreeType.Character);
-            }
-
-            if (PathOfExileUrlDecoder.TryMatch(url, out var type, out var passiveIds))
+            if (PoePlannerUrlDecoder.TryMatch(url, out var type, out var passiveIds) ||
+                PathOfExileUrlDecoder.TryMatch(url, out type, out passiveIds))
             {
                 return (passiveIds, type);
             }
