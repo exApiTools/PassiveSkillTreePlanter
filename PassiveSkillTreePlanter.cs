@@ -556,11 +556,13 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
 
     private void ValidateNodes(HashSet<ushort> currentNodes, Dictionary<ushort, SkillNode> nodeDict)
     {
+        var missingSourceNodeIds = new List<ushort>();
+        var missingLinkNodeIds = new List<ushort>();
         foreach (var urlNodeId in currentNodes)
         {
             if (!nodeDict.TryGetValue(urlNodeId, out var node))
             {
-                LogError($"PassiveSkillTree: Can't find passive skill tree node with id: {urlNodeId}", 5);
+                missingSourceNodeIds.Add(urlNodeId);
                 continue;
             }
 
@@ -568,9 +570,19 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
             {
                 if (!nodeDict.ContainsKey(lNodeId))
                 {
-                    LogError($"PassiveSkillTree: Can't find passive skill tree node with id: {lNodeId} to draw the link", 5);
+                    missingLinkNodeIds.Add(lNodeId);
                 }
             }
+        }
+
+        if (missingSourceNodeIds.Any())
+        {
+            LogError($"Can't find passive skill tree nodes with ids: {string.Join(", ", missingSourceNodeIds)}", 5);
+        }
+
+        if (missingLinkNodeIds.Any())
+        {
+            LogError($"Can't find passive skill tree nodes with ids {string.Join(", ", missingLinkNodeIds)} to draw the link", 5);
         }
     }
 

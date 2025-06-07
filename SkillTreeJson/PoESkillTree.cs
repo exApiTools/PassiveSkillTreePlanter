@@ -115,4 +115,4 @@ public class ExpansionJewel
     public long Parent { get; set; }
 }
 
-public enum Recipe { AmberOil, AzureOil, BlackOil, ClearOil, CrimsonOil, GoldenOil, IndigoOil, OpalescentOil, SepiaOil, SilverOil, TealOil, VerdantOil, VioletOil };
+public enum Recipe { AmberOil, AzureOil, BlackOil, ClearOil, CrimsonOil, GoldenOil, IndigoOil, OpalescentOil, SepiaOil, SilverOil, TealOil, VerdantOil, VioletOil, PrismaticOil, };
