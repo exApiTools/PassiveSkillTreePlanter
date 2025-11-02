@@ -37,5 +37,5 @@ public class PobCodeImporter : BaseUrlImporter
 
     protected override string Name => "PoB";
 
-    protected override uint UrlMaxLength => 50000;
+    protected override uint UrlMaxLength => 100000;
 }
