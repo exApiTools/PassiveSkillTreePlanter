@@ -72,8 +72,10 @@ public class PoePlannerUrlDecoder
 
         var rawBytes = Convert.FromBase64String(buildSegment);
 
-        var nodeCount = MemoryMarshal.Read<ushort>(rawBytes.AsSpan(4));
-        var nodeIds = MemoryMarshal.Cast<byte, ushort>(rawBytes.AsSpan(4 + sizeof(ushort), sizeof(ushort) * nodeCount)).ToArray().ToHashSet();
+        var treeVersion = MemoryMarshal.Read<ushort>(rawBytes.AsSpan(0));
+        var nodeOffset = treeVersion < 5 ? 4 : 5;
+        var nodeCount = MemoryMarshal.Read<ushort>(rawBytes.AsSpan(nodeOffset));
+        var nodeIds = MemoryMarshal.Cast<byte, ushort>(rawBytes.AsSpan(nodeOffset + sizeof(ushort), sizeof(ushort) * nodeCount)).ToArray().ToHashSet();
         return nodeIds;
     }
 }
