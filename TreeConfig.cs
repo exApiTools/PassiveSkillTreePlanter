@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using Newtonsoft.Json;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Newtonsoft.Json;
 
 namespace PassiveSkillTreePlanter;
 
@@ -22,8 +22,7 @@ public class TreeConfig
 
     public static TSettingType LoadSettingFile<TSettingType>(string fileName)
     {
-        if (!File.Exists(fileName))
-            return default(TSettingType);
+        if (!File.Exists(fileName)) return default;
 
         return JsonConvert.DeserializeObject<TSettingType>(File.ReadAllText(fileName));
     }
@@ -38,9 +37,9 @@ public class TreeConfig
 
     public class Tree
     {
-        public string Tag = "";
-        public string SkillTreeUrl = "";
         private ESkillTreeType? _type;
+        public string SkillTreeUrl = "";
+        public string Tag = "";
 
         [JsonIgnore]
         public ESkillTreeType Type => _type ??= TreeEncoder.DecodeUrl(SkillTreeUrl) switch
@@ -55,7 +54,7 @@ public class TreeConfig
     public class SkillTreeData
     {
         public string Notes { get; set; } = "";
-        public List<Tree> Trees { get; set; } = new List<Tree>();
+        public List<Tree> Trees { get; set; } = new();
         public string BuildLink { get; set; } = "";
         internal bool Modified { get; set; }
     }

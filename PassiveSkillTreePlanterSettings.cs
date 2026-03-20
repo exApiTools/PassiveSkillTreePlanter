@@ -1,4 +1,4 @@
-﻿using ExileCore.Shared.Attributes;
+using ExileCore.Shared.Attributes;
 using ExileCore.Shared.Interfaces;
 using ExileCore.Shared.Nodes;
 using SharpDX;
@@ -11,6 +11,12 @@ public class PassiveSkillTreePlanterSettings : ISettings
     public string SelectedBuild { get; set; } = string.Empty;
 
     [IgnoreMenu]
+    public string SelectedAtlasBuild { get; set; } = string.Empty;
+
+    [IgnoreMenu]
+    public string SelectedEditBuild { get; set; } = string.Empty;
+
+    [IgnoreMenu]
     public string LastSelectedCharacterUrl { get; set; }
 
     [IgnoreMenu]
@@ -18,11 +24,11 @@ public class PassiveSkillTreePlanterSettings : ISettings
 
     public RangeNode<int> LineWidth { get; set; } = new(3, 0, 5);
 
-    public ColorNode PickedBorderColor { get; set; } = new ColorNode();
-    public ColorNode UnpickedBorderColor { get; set; } = new ColorNode(Color.Green);
-    public ColorNode WrongPickedBorderColor { get; set; } = new ColorNode(Color.Red);
+    public ColorNode PickedBorderColor { get; set; } = new();
+    public ColorNode UnpickedBorderColor { get; set; } = new(Color.Green);
+    public ColorNode WrongPickedBorderColor { get; set; } = new(Color.Red);
 
-    public ToggleNode ShowControlPanel { get; set; } = new ToggleNode(true);
-    public ToggleNode SaveChangesAutomatically { get; set; } = new ToggleNode(true);
-    public ToggleNode Enable { get; set; } = new ToggleNode(false);
+    public ToggleNode ShowControlPanel { get; set; } = new(true);
+    public ToggleNode SaveChangesAutomatically { get; set; } = new(true);
+    public ToggleNode Enable { get; set; } = new(false);
 }

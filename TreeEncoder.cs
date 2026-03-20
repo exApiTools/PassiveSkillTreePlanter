@@ -1,7 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using ExileCore;
+﻿using ExileCore;
 using PassiveSkillTreePlanter.UrlDecoders;
+using System;
+using System.Collections.Generic;
 
 namespace PassiveSkillTreePlanter;
 
@@ -11,8 +11,7 @@ public class TreeEncoder
     {
         try
         {
-            if (PoePlannerUrlDecoder.TryMatch(url, out var type, out var passiveIds) ||
-                PathOfExileUrlDecoder.TryMatch(url, out type, out passiveIds))
+            if (PoePlannerUrlDecoder.TryMatch(url, out var type, out var passiveIds) || PathOfExileUrlDecoder.TryMatch(url, out type, out passiveIds))
             {
                 return (passiveIds, type);
             }
