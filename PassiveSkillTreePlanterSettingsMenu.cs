@@ -51,54 +51,46 @@ internal sealed class PassiveSkillTreePlanterSettingsMenu
     {
         _plugin.ProcessPendingOfficialTreeReload();
 
-        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 5.0f);
         var contentRegionArea = ImGui.GetContentRegionAvail();
-        if (ImGui.BeginChild("PluginSettingsRoot", contentRegionArea, ImGuiChildFlags.Border, ImGuiWindowFlags.None))
+        if (!ImGui.BeginTabBar("PassiveSkillTreePlanter_MainTabs", ImGuiTabBarFlags.None)) return;
+
+        if (ImGui.BeginTabItem("Passive Tree"))
         {
-            if (ImGui.BeginTabBar("PassiveSkillTreePlanter_MainTabs", ImGuiTabBarFlags.None))
-            {
-                if (ImGui.BeginTabItem("Passive Tree"))
-                {
-                    DrawBuildSelectionSharedMenu(ESkillTreeType.Character);
-                    var characterTrees = _plugin.SelectedBuildData.Trees.Where(t => t.Type == ESkillTreeType.Character).ToList();
-                    DrawTreeLoadTableSection(characterTrees, "CharLoad");
-                    DrawBuildNotesSubsection(_plugin.SelectedBuildData.Notes, ref _showCharacterBuildNotes, "CharSelNotes");
-                    ImGui.EndTabItem();
-                }
-
-                if (ImGui.BeginTabItem("Atlas Tree"))
-                {
-                    DrawBuildSelectionSharedMenu(ESkillTreeType.Atlas);
-                    var atlasTrees = _plugin.AtlasBuildData.Trees.Where(t => t.Type == ESkillTreeType.Atlas).ToList();
-                    DrawTreeLoadTableSection(atlasTrees, "AtlasLoad");
-                    DrawBuildNotesSubsection(_plugin.AtlasBuildData.Notes, ref _showAtlasBuildNotes, "AtlasSelNotes");
-                    ImGui.EndTabItem();
-                }
-
-                if (ImGui.BeginTabItem("Build Edit"))
-                {
-                    DrawBuildEdit(contentRegionArea);
-                    ImGui.EndTabItem();
-                }
-
-                if (ImGui.BeginTabItem("GGG tree JSON"))
-                {
-                    DrawOfficialTreeExportTab();
-                    ImGui.EndTabItem();
-                }
-
-                if (ImGui.BeginTabItem("Settings"))
-                {
-                    drawCorePluginSettings();
-                    ImGui.EndTabItem();
-                }
-
-                ImGui.EndTabBar();
-            }
+            DrawBuildSelectionSharedMenu(ESkillTreeType.Character);
+            var characterTrees = _plugin.SelectedBuildData.Trees.Where(t => t.Type == ESkillTreeType.Character).ToList();
+            DrawTreeLoadTableSection(characterTrees, "CharLoad");
+            DrawBuildNotesSubsection(_plugin.SelectedBuildData.Notes, ref _showCharacterBuildNotes, "CharSelNotes");
+            ImGui.EndTabItem();
         }
 
-        ImGui.PopStyleVar();
-        ImGui.EndChild();
+        if (ImGui.BeginTabItem("Atlas Tree"))
+        {
+            DrawBuildSelectionSharedMenu(ESkillTreeType.Atlas);
+            var atlasTrees = _plugin.AtlasBuildData.Trees.Where(t => t.Type == ESkillTreeType.Atlas).ToList();
+            DrawTreeLoadTableSection(atlasTrees, "AtlasLoad");
+            DrawBuildNotesSubsection(_plugin.AtlasBuildData.Notes, ref _showAtlasBuildNotes, "AtlasSelNotes");
+            ImGui.EndTabItem();
+        }
+
+        if (ImGui.BeginTabItem("Build Edit"))
+        {
+            DrawBuildEdit(contentRegionArea);
+            ImGui.EndTabItem();
+        }
+
+        if (ImGui.BeginTabItem("GGG tree JSON"))
+        {
+            DrawOfficialTreeExportTab();
+            ImGui.EndTabItem();
+        }
+
+        if (ImGui.BeginTabItem("Settings"))
+        {
+            drawCorePluginSettings();
+            ImGui.EndTabItem();
+        }
+
+        ImGui.EndTabBar();
     }
 
     private void DrawOfficialTreeExportTab()
