@@ -1,15 +1,17 @@
-﻿using System;
+﻿using PassiveSkillTreePlanter.SkillTreeJson;
+using System;
 using System.Collections.Generic;
 using System.Numerics;
-using PassiveSkillTreePlanter.SkillTreeJson;
 
 namespace PassiveSkillTreePlanter;
 
 public class SkillNode
 {
-    public Constants Constants { private get; init; }
-    public List<int> OrbitRadii => Constants.OrbitRadii;
-    public List<int> SkillsPerOrbit => Constants.SkillsPerOrbit;
+    private static readonly int[] Angles16 = {0, 30, 45, 60, 90, 120, 135, 150, 180, 210, 225, 240, 270, 300, 315, 330};
+
+    private static readonly int[] Angles40 =
+        {0, 10, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 110, 120, 130, 135, 140, 150, 160, 170, 180, 190, 200, 210, 220, 225, 230, 240, 250, 260, 270, 280, 290, 300, 310, 315, 320, 330, 340, 350};
+
     public bool bJevel;
     public bool bKeyStone;
     public bool bMastery;
@@ -20,13 +22,20 @@ public class SkillNode
     //Cached for drawing
     public float DrawSize = 100;
     public ushort Id; // "id": -28194677,
-    public List<ushort> linkedNodes = new List<ushort>();
-    public string Name; //"dn": "Block Recovery",
-    public int Orbit; //  "o": 1,
+    public List<ushort> linkedNodes = new();
+    public string Name;     //"dn": "Block Recovery",
+    public int Orbit;       //  "o": 1,
     public long OrbitIndex; // "oidx": 3,
     public SkillNodeGroup SkillNodeGroup;
+    public Constants Constants { private get; init; }
+    public List<int> OrbitRadii => Constants.OrbitRadii;
+    public List<int> SkillsPerOrbit => Constants.SkillsPerOrbit;
 
     public Vector2 Position => GetPositionAtAngle(Arc);
+
+    public int OrbitRadius => OrbitRadii[Orbit];
+
+    public float Arc => GetOrbitAngle(OrbitIndex, SkillsPerOrbit[Orbit]);
 
     public Vector2 GetPositionAtAngle(float angle)
     {
@@ -34,26 +43,16 @@ public class SkillNode
         return SkillNodeGroup.Position + OrbitRadius * GetAngleVector(angle);
     }
 
-    public int OrbitRadius => OrbitRadii[Orbit];
-
-    public float Arc => GetOrbitAngle(OrbitIndex, SkillsPerOrbit[Orbit]);
-
     public void Init()
     {
         DrawPosition = Position;
 
-        if (bJevel)
-            DrawSize = 160;
+        if (bJevel) DrawSize = 160;
 
-        if (bNotable)
-            DrawSize = 170;
+        if (bNotable) DrawSize = 170;
 
-        if (bKeyStone)
-            DrawSize = 250;
+        if (bKeyStone) DrawSize = 250;
     }
-
-    private static readonly int[] Angles16 = { 0, 30, 45, 60, 90, 120, 135, 150, 180, 210, 225, 240, 270, 300, 315, 330 };
-    private static readonly int[] Angles40 = { 0, 10, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 110, 120, 130, 135, 140, 150, 160, 170, 180, 190, 200, 210, 220, 225, 230, 240, 250, 260, 270, 280, 290, 300, 310, 315, 320, 330, 340, 350 };
 
     private static float GetOrbitAngle(long orbitIndex, long maxNodePositions)
     {
@@ -65,14 +64,11 @@ public class SkillNode
         };
     }
 
-    public static Vector2 GetAngleVector(float angle)
-    {
-        return new Vector2(MathF.Sin(angle), -MathF.Cos(angle));
-    }
+    public static Vector2 GetAngleVector(float angle) => new(MathF.Sin(angle), -MathF.Cos(angle));
 }
 
 public class SkillNodeGroup
 {
-    public List<SkillNode> Nodes = new List<SkillNode>();
+    public List<SkillNode> Nodes = new();
     public Vector2 Position;
 }

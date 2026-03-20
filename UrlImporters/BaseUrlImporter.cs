@@ -1,4 +1,4 @@
-﻿using ImGuiNET;
+using ImGuiNET;
 using PassiveSkillTreePlanter.UrlDecoders;
 using System.Collections.Generic;
 using System.Linq;
@@ -113,7 +113,6 @@ public abstract class BaseUrlImporter
 
                         if (data.Count != 1)
                         {
-                            //select next tree after import
                             _selectedVariant = Math.Min(_selectedVariant + 1, data.Count - 1);
                             _selectedProgress = data[_selectedVariant]?.Passives?.Count ?? 0;
                         }

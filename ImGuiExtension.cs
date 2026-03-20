@@ -1,12 +1,11 @@
-﻿using System.Collections.Generic;
-using ImGuiNET;
+﻿using ImGuiNET;
+using System.Collections.Generic;
 
 namespace PassiveSkillTreePlanter;
 
 public class ImGuiExtension
 {
-    public static string ComboBox(string sideLabel, string currentSelectedItem, List<string> objectList, out bool didChange,
-        ImGuiComboFlags comboFlags = ImGuiComboFlags.HeightRegular)
+    public static string ComboBox(string sideLabel, string currentSelectedItem, List<string> objectList, out bool didChange, ImGuiComboFlags comboFlags = ImGuiComboFlags.HeightRegular)
     {
         if (ImGui.BeginCombo(sideLabel, currentSelectedItem, comboFlags))
         {
