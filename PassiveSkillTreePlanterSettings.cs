@@ -23,6 +23,7 @@ public class PassiveSkillTreePlanterSettings : ISettings
     public string LastSelectedAtlasUrl { get; set; }
 
     public RangeNode<int> LineWidth { get; set; } = new(3, 0, 5);
+    public ToggleNode CurvedLines { get; set; } = new(false);
 
     public ColorNode PickedBorderColor { get; set; } = new();
     public ColorNode UnpickedBorderColor { get; set; } = new(Color.Green);

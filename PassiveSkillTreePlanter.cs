@@ -609,13 +609,27 @@ public class PassiveSkillTreePlanter : BaseSettingsPlugin<PassiveSkillTreePlante
                 node1Pos += diffVector * node1.DrawSize * scale / 2;
                 node2Pos -= diffVector * node2.DrawSize * scale / 2;
 
-                Graphics.DrawLine(node1Pos, node2Pos, Settings.LineWidth, link.type switch
+                //color pulled out so the arc can share it
+                Color color = link.type switch
                 {
                     ConnectionType.Deallocate => Settings.WrongPickedBorderColor,
                     ConnectionType.Allocate => Settings.UnpickedBorderColor,
                     ConnectionType.Allocated => Settings.PickedBorderColor,
                     _ => Color.Orange
-                });
+                };
+
+                //same group + same orbit is how the game decides a link is curved
+                if (Settings.CurvedLines && node1.SkillNodeGroup != null && node1.SkillNodeGroup == node2.SkillNodeGroup && node1.Orbit == node2.Orbit && node1.Orbit != 0)
+                {
+                    var sweep = MathF.IEEERemainder(node2.Arc - node1.Arc, 2 * MathF.PI);
+                    var start = node1.Arc + MathF.Sign(sweep) * node1.DrawSize / 2 / node1.OrbitRadius;
+                    var end = node1.Arc + sweep - MathF.Sign(sweep) * node2.DrawSize / 2 / node1.OrbitRadius;
+                    Graphics.DrawPolyLine(Enumerable.Range(0, 33).Select(i => baseOffset + node1.GetPositionAtAngle(start + (end - start) * i / 32) * scale).ToArray(), color, Settings.LineWidth);
+                }
+                else
+                {
+                    Graphics.DrawLine(node1Pos, node2Pos, Settings.LineWidth, color);
+                }
 
                 bool NodeNameEndsWithGateway(ushort nodeId)
                 {
